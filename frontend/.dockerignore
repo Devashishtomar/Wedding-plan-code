@@ -1,0 +1,40 @@
+# -----------------------------
+# Node / npm
+# -----------------------------
+node_modules
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+
+# -----------------------------
+# Build output
+# (generated inside Docker)
+# -----------------------------
+dist
+
+# -----------------------------
+# OS / Editor
+# -----------------------------
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# -----------------------------
+# Git
+# -----------------------------
+.git
+.gitignore
+
+# -----------------------------
+# Docker
+# -----------------------------
+Dockerfile
+docker-compose.yml
+
+# -----------------------------
+# Tests / docs
+# -----------------------------
+tests
+coverage
+README.md

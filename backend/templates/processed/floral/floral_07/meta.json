@@ -1,0 +1,181 @@
+{
+  "id": "floral_07",
+  "name": "Floral 07",
+  "category": "floral",
+  "canvas": {
+    "width": 1200,
+    "height": 1800
+  },
+  "textFields": [
+    {
+      "key": "title",
+      "label": "Title",
+      "default": {
+        "x": 600,
+        "y": 340,
+        "fontFamily": "Playfair Display",
+        "fontSize": 40,
+        "color": "#2b2b2b",
+        "bold": false,
+        "align": "center"
+      },
+      "constraints": {
+        "fontSize": {
+          "min": 30,
+          "max": 48
+        },
+        "yOffset": {
+          "min": -50,
+          "max": 50
+        },
+        "allowBold": true
+      }
+    },
+    {
+      "key": "names",
+      "label": "Couple Names",
+      "default": {
+        "x": 600,
+        "y": 420,
+        "fontFamily": "Playfair Display",
+        "fontSize": 72,
+        "color": "#2b2b2b",
+        "bold": false,
+        "align": "center"
+      },
+      "constraints": {
+        "fontSize": {
+          "min": 60,
+          "max": 90
+        },
+        "yOffset": {
+          "min": -80,
+          "max": 80
+        },
+        "allowBold": true
+      }
+    },
+    {
+      "key": "message",
+      "label": "Invitation Message",
+      "default": {
+        "x": 600,
+        "y": 580,
+        "maxWidth": 780,
+        "fontFamily": "Cormorant Garamond",
+        "fontSize": 35,
+        "color": "#444444",
+        "bold": false,
+        "align": "center"
+      },
+      "constraints": {
+        "fontSize": {
+          "min": 28,
+          "max": 40
+        },
+        "yOffset": {
+          "min": -100,
+          "max": 100
+        },
+        "allowBold": false
+      }
+    },
+    {
+      "key": "date",
+      "label": "Wedding Date",
+      "default": {
+        "x": 600,
+        "y": 790,
+        "fontFamily": "Cormorant Garamond",
+        "fontSize": 32,
+        "color": "#2b2b2b",
+        "bold": false,
+        "align": "center"
+      },
+      "constraints": {
+        "fontSize": {
+          "min": 28,
+          "max": 36
+        },
+        "yOffset": {
+          "min": -60,
+          "max": 60
+        },
+        "allowBold": true
+      }
+    },
+    {
+      "key": "time",
+      "label": "Time",
+      "default": {
+        "x": 600,
+        "y": 840,
+        "fontFamily": "Cormorant Garamond",
+        "fontSize": 26,
+        "color": "#444444",
+        "bold": false,
+        "align": "center"
+      },
+      "constraints": {
+        "fontSize": {
+          "min": 22,
+          "max": 30
+        },
+        "yOffset": {
+          "min": -50,
+          "max": 50
+        },
+        "allowBold": false
+      }
+    },
+    {
+      "key": "venue",
+      "label": "Venue",
+      "default": {
+        "x": 600,
+        "y": 920,
+        "maxWidth": 700,
+        "fontFamily": "Cormorant Garamond",
+        "fontSize": 32,
+        "color": "#444444",
+        "bold": false,
+        "align": "center"
+      },
+      "constraints": {
+        "fontSize": {
+          "min": 26,
+          "max": 36
+        },
+        "yOffset": {
+          "min": -80,
+          "max": 80
+        },
+        "allowBold": false
+      }
+    },
+    {
+      "key": "rsvpDate",
+      "label": "RSVP Date",
+      "default": {
+        "x": 600,
+        "y": 1160,
+        "fontFamily": "Cormorant Garamond",
+        "fontSize": 24,
+        "color": "#666666",
+        "bold": false,
+        "align": "center"
+      },
+      "constraints": {
+        "fontSize": {
+          "min": 20,
+          "max": 28
+        },
+        "yOffset": {
+          "min": -40,
+          "max": 40
+        },
+        "allowBold": false
+      }
+    }
+  ]
+}

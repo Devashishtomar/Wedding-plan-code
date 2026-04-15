@@ -1,0 +1,69 @@
+{
+  "id": "vintage_01",
+  "name": "Vintage 01",
+  "category": "vintage",
+  "canvas": {
+    "width": 1200,
+    "height": 1800
+  },
+  "textFields": [
+    {
+      "key": "names",
+      "x": 600,
+      "y": 420,
+      "fontFamily": "Playfair Display",
+      "fontSize": 72,
+      "color": "#2b2b2b",
+      "align": "center"
+    },
+    {
+      "key": "message",
+      "x": 600,
+      "y": 580,
+      "maxWidth": 780,
+      "fontFamily": "Cormorant Garamond",
+      "fontSize": 35,
+      "lineHeight": 1.5,
+      "color": "#2b2b2b",
+      "align": "center"
+    },
+    {
+      "key": "date",
+      "x": 600,
+      "y": 790,
+      "fontFamily": "Cormorant Garamond",
+      "fontSize": 32,
+      "color": "#2b2b2b",
+      "align": "center"
+    },
+    {
+      "key": "time",
+      "x": 600,
+      "y": 840,
+      "fontFamily": "Cormorant Garamond",
+      "fontSize": 26,
+      "color": "#2b2b2b",
+      "align": "center"
+    },
+    {
+      "key": "venue",
+      "x": 600,
+      "y": 920,
+      "maxWidth": 700,
+      "fontFamily": "Cormorant Garamond",
+      "fontSize": 32,
+      "lineHeight": 1.4,
+      "color": "#2b2b2b",
+      "align": "center"
+    },
+    {
+      "key": "rsvpDate",
+      "x": 600,
+      "y": 1160,
+      "fontFamily": "Cormorant Garamond",
+      "fontSize": 24,
+      "color": "#2b2b2b",
+      "align": "center"
+    }
+  ]
+}

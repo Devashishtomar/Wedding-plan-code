@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Template Preview</title>
+    <style>
+        body {
+            background: #eee;
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+            font-family: serif;
+        }
+
+        .canvas {
+            position: relative;
+            width: 1200px;
+            height: 1800px;
+            background-image: url("./background.jpg");
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .text {
+            position: absolute;
+            transform: translateX(-50%);
+            text-align: center;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="canvas" id="canvas"></div>
+
+    <script>
+        fetch("./meta.json")
+            .then(res => res.json())
+            .then(meta => {
+                const canvas = document.getElementById("canvas");
+
+                const dummyData = {
+                    names: "Aarav & Diya",
+                    message: "Together with their families,\nrequest the pleasure of your presence\nat the celebration of their wedding",
+                    date: "12 December 2026",
+                    time: "7:00 PM onwards",
+                    venue: "At \nThe Royal Palace\nJaipur, Rajasthan",
+                    rsvpDate: "Please RSVP by 20th November"
+                };
+
+                meta.textFields.forEach(field => {
+                    const el = document.createElement("div");
+                    el.className = "text";
+                    el.innerText = dummyData[field.key] || "";
+
+                    el.style.left = field.x + "px";
+                    el.style.top = field.y + "px";
+                    el.style.maxWidth = field.maxWidth
+                        ? field.maxWidth + "px"
+                        : "800px";
+
+                    el.style.fontFamily = field.fontFamily || "serif";
+                    el.style.fontSize = field.fontSize + "px";
+                    el.style.color = field.color || "#000";
+                    el.style.lineHeight = field.lineHeight || 1.3;
+
+                    canvas.appendChild(el);
+                });
+            });
+    </script>
+
+</body>
+
+</html>

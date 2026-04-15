@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+}
+
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  weddings  Wedding[]
+  invitations Invitation[]
+}
+
+model Wedding {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime?
+  location    String?
+  budget      Int      @default(0)
+  guestCount  Int      @default(0)
+  weddingType String?
+  createdAt   DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+  setupCompleted Boolean  @default(false)
+
+  user         User         @relation(fields: [userId], references: [id])
+  guests       Guest[]
+  budgetItems  BudgetItem[]
+  invitations  Invitation[]
+  checklistTasks ChecklistTask[]   
+  @@index([userId])
+}
+
+model Guest {
+  id        String   @id @default(uuid())
+  weddingId String
+  name      String
+  email     String?
+  rsvp      String   @default("PENDING")
+  createdAt DateTime @default(now())
+
+  wedding Wedding @relation(fields: [weddingId], references: [id])
+  invites      GuestInvite[] 
+  @@index([weddingId])
+}
+
+model BudgetItem {
+  id         String   @id @default(uuid())
+  weddingId  String
+  category   String
+  estimated  Int
+  actual     Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  wedding Wedding @relation(fields: [weddingId], references: [id])
+}
+
+model Invitation {
+  id               String   @id @default(uuid())
+  weddingId        String   @unique
+  userId           String
+
+  message          String
+  token            String   @unique
+
+  templateId       String
+
+  title            String?
+  names            String?
+  date             String?
+  time             String?
+  venue            String?
+  rsvpDate         String?
+
+  globalFontFamily String?
+  styles            Json?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  wedding          Wedding        @relation(fields: [weddingId], references: [id])
+  user             User           @relation(fields: [userId], references: [id])
+  guestInvites     GuestInvite[]
+}
+
+
+model ChecklistTask {
+  id         String   @id @default(uuid())
+  weddingId  String
+  title      String
+  category   String
+  priority   String   @default("MEDIUM")
+  dueDate    DateTime?
+  completed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  wedding   Wedding          @relation(fields: [weddingId], references: [id])
+  subtasks  ChecklistSubTask[]
+}
+
+model ChecklistSubTask {
+  id        String   @id @default(uuid())
+  taskId    String
+  title     String
+  completed Boolean @default(false)
+
+  task ChecklistTask @relation(fields: [taskId], references: [id])
+}
+
+model GuestInvite {
+  id           String   @id @default(uuid())
+  guestId      String
+  invitationId String
+  token        String   @unique
+  status       String   @default("CREATED")
+  sentAt       DateTime?
+  respondedAt  DateTime?
+
+  guest        Guest      @relation(fields: [guestId], references: [id])
+  invitation   Invitation @relation(fields: [invitationId], references: [id])
+  @@index([guestId])
+  @@index([invitationId])
+}
+

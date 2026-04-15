@@ -1,0 +1,221 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Great+Vibes&family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Raleway:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 50% 98%;
+    --foreground: 340 30% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 340 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 340 30% 15%;
+
+    --primary: 340 75% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 30% 94%;
+    --secondary-foreground: 340 30% 15%;
+
+    --muted: 30 20% 94%;
+    --muted-foreground: 340 15% 45%;
+
+    --accent: 340 70% 94%;
+    --accent-foreground: 340 75% 40%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 30 20% 88%;
+    --input: 30 20% 88%;
+    --ring: 340 75% 55%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 30 30% 97%;
+    --sidebar-foreground: 340 30% 20%;
+    --sidebar-primary: 340 75% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 70% 94%;
+    --sidebar-accent-foreground: 340 75% 40%;
+    --sidebar-border: 30 20% 90%;
+    --sidebar-ring: 340 75% 55%;
+  }
+
+  .dark {
+    --background: 340 20% 8%;
+    --foreground: 30 20% 95%;
+
+    --card: 340 20% 11%;
+    --card-foreground: 30 20% 95%;
+
+    --popover: 340 20% 11%;
+    --popover-foreground: 30 20% 95%;
+
+    --primary: 340 75% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 340 15% 18%;
+    --secondary-foreground: 30 20% 95%;
+
+    --muted: 340 15% 18%;
+    --muted-foreground: 30 15% 60%;
+
+    --accent: 340 40% 18%;
+    --accent-foreground: 340 70% 80%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 50% 35%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 70% 40%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 340 15% 18%;
+    --input: 340 15% 18%;
+    --ring: 340 75% 60%;
+
+    --sidebar-background: 340 20% 10%;
+    --sidebar-foreground: 30 15% 90%;
+    --sidebar-primary: 340 75% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 40% 18%;
+    --sidebar-accent-foreground: 340 70% 80%;
+    --sidebar-border: 340 15% 16%;
+    --sidebar-ring: 340 75% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* Landing Page Theme - Scoped to landing pages only */
+.landing-theme {
+  --landing-background: 250 15% 6%;
+  --landing-foreground: 250 15% 95%;
+  --landing-card: 250 20% 8%;
+  --landing-card-foreground: 250 15% 95%;
+  --landing-popover: 250 20% 8%;
+  --landing-popover-foreground: 250 15% 95%;
+  --landing-primary: 270 70% 60%;
+  --landing-primary-foreground: 0 0% 100%;
+  --landing-secondary: 260 20% 15%;
+  --landing-secondary-foreground: 250 15% 95%;
+  --landing-muted: 250 15% 12%;
+  --landing-muted-foreground: 250 10% 65%;
+  --landing-accent: 45 95% 65%;
+  --landing-accent-foreground: 250 15% 6%;
+  --landing-border: 250 20% 20%;
+  --landing-input: 250 20% 15%;
+  --landing-ring: 270 70% 60%;
+  
+  /* Custom gradients and shadows */
+  --purple-gradient: linear-gradient(135deg, hsl(270 70% 60%) 0%, hsl(280 80% 50%) 100%);
+  --gold-gradient: linear-gradient(135deg, hsl(45 95% 65%) 0%, hsl(35 85% 55%) 100%);
+  --hero-gradient: linear-gradient(135deg, hsl(270 70% 60%) 0%, hsl(220 90% 65%) 50%, hsl(45 95% 65%) 100%);
+  --shadow-elegant: 0 25px 50px -12px hsl(270 70% 60% / 0.25);
+  --shadow-glow: 0 0 40px hsl(270 70% 60% / 0.3);
+  --shadow-gold: 0 10px 30px -10px hsl(45 95% 65% / 0.4);
+  
+  background-color: hsl(var(--landing-background));
+  color: hsl(var(--landing-foreground));
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Playfair Display', serif;
+  }
+  
+  /* Reduced motion - respect user preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(340 75% 55%) 0%, hsl(350 80% 65%) 100%);
+  }
+  
+  .gradient-warm {
+    background: linear-gradient(135deg, hsl(30 50% 98%) 0%, hsl(340 70% 96%) 100%);
+  }
+  
+  /* Landing page utility classes */
+  .bg-landing-background { background-color: hsl(var(--landing-background)); }
+  .bg-landing-card { background-color: hsl(var(--landing-card)); }
+  .bg-landing-secondary { background-color: hsl(var(--landing-secondary)); }
+  .bg-landing-muted { background-color: hsl(var(--landing-muted)); }
+  .bg-landing-popover { background-color: hsl(var(--landing-popover)); }
+  .bg-landing-primary { background-color: hsl(var(--landing-primary)); }
+  .text-landing-foreground { color: hsl(var(--landing-foreground)); }
+  .text-landing-muted-foreground { color: hsl(var(--landing-muted-foreground)); }
+  .text-landing-accent { color: hsl(var(--landing-accent)); }
+  .text-landing-accent-foreground { color: hsl(var(--landing-accent-foreground)); }
+  .text-landing-primary { color: hsl(var(--landing-primary)); }
+  .text-landing-primary-foreground { color: hsl(var(--landing-primary-foreground)); }
+  .border-landing-border { border-color: hsl(var(--landing-border)); }
+  .border-landing-primary { border-color: hsl(var(--landing-primary)); }
+  .hover\:bg-landing-muted:hover { background-color: hsl(var(--landing-muted)); }
+  .hover\:text-landing-accent:hover { color: hsl(var(--landing-accent)); }
+  .hover\:text-landing-foreground:hover { color: hsl(var(--landing-foreground)); }
+  .hover\:bg-landing-primary:hover { background-color: hsl(var(--landing-primary)); }
+  .hover\:bg-landing-background:hover { background-color: hsl(var(--landing-background)); }
+  .hover\:border-landing-primary\/50:hover { border-color: hsl(var(--landing-primary) / 0.5); }
+  .focus\:border-landing-primary:focus { border-color: hsl(var(--landing-primary)); }
+  .focus\:ring-landing-primary:focus { --tw-ring-color: hsl(var(--landing-primary)); }
+  
+  /* Gradient background utilities */
+  .bg-purple-gradient { background: linear-gradient(135deg, hsl(270 70% 60%) 0%, hsl(280 80% 50%) 100%); }
+  .bg-gold-gradient { background: linear-gradient(135deg, hsl(45 95% 65%) 0%, hsl(35 85% 55%) 100%); }
+  .bg-hero-gradient { background: linear-gradient(135deg, hsl(270 70% 60%) 0%, hsl(220 90% 65%) 50%, hsl(45 95% 65%) 100%); }
+  
+  /* Gradient text utilities - use these classes for gradient text */
+  .text-gradient-purple {
+    background: linear-gradient(135deg, hsl(270 70% 60%) 0%, hsl(280 80% 50%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(45 95% 65%) 0%, hsl(35 85% 55%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-gradient-hero {
+    background: linear-gradient(135deg, hsl(270 70% 60%) 0%, hsl(220 90% 65%) 50%, hsl(45 95% 65%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Shadow utilities */
+  .shadow-elegant { box-shadow: 0 25px 50px -12px hsl(270 70% 60% / 0.25); }
+  .shadow-glow { box-shadow: 0 0 40px hsl(270 70% 60% / 0.3); }
+  .shadow-gold { box-shadow: 0 10px 30px -10px hsl(45 95% 65% / 0.4); }
+}

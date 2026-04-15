@@ -1,0 +1,55 @@
+# -----------------------------
+# Node / npm
+# -----------------------------
+node_modules
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+
+
+# -----------------------------
+# Logs
+# -----------------------------
+logs
+*.log
+
+# -----------------------------
+# OS / Editor
+# -----------------------------
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# -----------------------------
+# Git
+# -----------------------------
+.git
+.gitignore
+
+# -----------------------------
+# Prisma
+# (keep schema, ignore generated junk if any)
+# -----------------------------
+prisma/migrations
+
+# -----------------------------
+# Build / temp artifacts
+# -----------------------------
+dist
+tmp
+temp
+
+# -----------------------------
+# Docker
+# -----------------------------
+Dockerfile
+docker-compose.yml
+
+# -----------------------------
+# Tests & docs (if any)
+# -----------------------------
+tests
+coverage
+README.md
+.md

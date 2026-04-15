@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Template Preview (With Overrides)</title>
+  <style>
+    body {
+      background: #eee;
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+      font-family: serif;
+    }
+
+    .canvas {
+      position: relative;
+      width: 1200px;
+      height: 1800px;
+      background-image: url("./background.jpg");
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    }
+
+    .text {
+      position: absolute;
+      transform: translateX(-50%);
+      text-align: center;
+      white-space: pre-wrap;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="canvas" id="canvas"></div>
+
+<script>
+  // Simulated user invitation data (this mimics editor output)
+  const userOverrides = {
+    names: {
+      fontSize: 80,
+      color: "#7a1e1e",
+      bold: true,
+      yOffset: -40
+    },
+    message: {
+      fontFamily: "Libre Baskerville"
+    },
+    venue: {
+      yOffset: 30
+    }
+  };
+
+  const dummyData = {
+    names: "Aarav & Diya",
+    message: "Together with their families,\nrequest the pleasure of your presence\nat the celebration of their wedding",
+    date: "12 December 2026",
+    time: "7:00 PM onwards",
+    venue: "The Royal Palace\nJaipur, Rajasthan",
+    rsvpDate: "Please RSVP by 20th November"
+  };
+
+  fetch("./meta.json")
+    .then(res => res.json())
+    .then(meta => {
+      const canvas = document.getElementById("canvas");
+
+      meta.textFields.forEach(field => {
+        const defaults = field.default;
+        const overrides = userOverrides[field.key] || {};
+
+        // Merge defaults + overrides
+        const fontSize = overrides.fontSize ?? defaults.fontSize;
+        const fontFamily = overrides.fontFamily ?? defaults.fontFamily;
+        const color = overrides.color ?? defaults.color;
+        const bold = overrides.bold ?? defaults.bold;
+        const yOffset = overrides.yOffset ?? 0;
+
+        const el = document.createElement("div");
+        el.className = "text";
+        el.innerText = dummyData[field.key] || "";
+
+        el.style.left = defaults.x + "px";
+        el.style.top = (defaults.y + yOffset) + "px";
+        el.style.maxWidth = defaults.maxWidth
+          ? defaults.maxWidth + "px"
+          : "800px";
+
+        el.style.fontFamily = fontFamily;
+        el.style.fontSize = fontSize + "px";
+        el.style.color = color;
+        el.style.fontWeight = bold ? "700" : "400";
+        el.style.lineHeight = defaults.lineHeight || 1.4;
+        el.style.textAlign = defaults.align || "center";
+
+        canvas.appendChild(el);
+      });
+    })
+    .catch(err => {
+      console.error("Preview error:", err);
+    });
+</script>
+
+</body>
+</html>
