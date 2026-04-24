@@ -23,9 +23,28 @@ export const getMyInvitation = async ({ userId }) => {
         where: { weddingId: wedding.id },
     });
 
-    if (!invitation || !invitation.templateId) return null;
+    if (!invitation) return null;
 
-    // Editor fetch → return RAW invitation + template meta
+    if (invitation.isCustom) {
+        return {
+            invitation: {
+                id: invitation.id,
+                weddingId: invitation.weddingId,
+                token: invitation.token,
+                templateId: invitation.templateId, 
+                isCustom: true,
+                canvasData: invitation.canvasData,
+                customBackground: invitation.customBackground,
+                createdAt: invitation.createdAt,
+                updatedAt: invitation.updatedAt,
+            },
+            template: null, 
+            resolvedFields: {}
+        };
+    }
+
+    if (!invitation.templateId) return null;
+
     const template = loadTemplateMeta(invitation.templateId);
 
     return {

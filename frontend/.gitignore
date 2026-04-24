@@ -27,3 +27,5 @@ dockerfile
 docker-compose.yml
 package-lock.json
 nginx.conf
+
+assets/

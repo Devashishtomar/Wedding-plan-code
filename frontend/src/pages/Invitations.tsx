@@ -1,33 +1,39 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { FieldStyles, FieldName } from "@/types/invitation";
+import { CustomInvitationData } from "@/types/customInvitation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, ExternalLink, Pencil } from "lucide-react";
+import { Copy, Check, ExternalLink, Pencil, Sparkles, PaintBucket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { useSidebar } from "@/components/ui/sidebar";
+
 import TemplateGallery from "@/components/invitations/TemplateGallery";
 import TemplateEditor from "@/components/invitations/TemplateEditor";
+import { CustomEditorPage } from "@/components/invitations/custom-editor";
 
+const CUSTOM_INVITATION_STORAGE_KEY = "custom_invitation_data";
 
 type InvitationResponse = {
   invitation: {
     id: string;
     templateId: string;
     token: string;
+    isCustom?: boolean;
+    canvasData?: any[];
+    customBackground?: string;
     content: Record<string, string | null>;
     styles: FieldStyles;
     globalFontFamily?: string;
+    updatedAt?: string;
   };
   template: {
     id: string;
     name: string;
     category: string;
     backgroundUrl: string;
-    canvas: {
-      width: number;
-      height: number;
-    };
+    canvas: { width: number; height: number };
     textFields: {
       key: FieldName;
       default: {
@@ -52,49 +58,87 @@ type InvitationResponse = {
 
 const Invitations = () => {
   const { toast } = useToast();
+  const { setOpen } = useSidebar();
+
   const [copied, setCopied] = useState(false);
   const [invitation, setInvitation] = useState<InvitationResponse | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [view, setView] = useState<"gallery" | "editor" | "share">("gallery");
+  const [savedCustomInvitation, setSavedCustomInvitation] = useState<CustomInvitationData | null>(null);
+
+  const [view, setView] = useState<"gallery" | "editor" | "share" | "custom-editor">("gallery");
   const [loading, setLoading] = useState(true);
 
+  const collapseSidebar = useCallback(() => {
+    setOpen(false);
+  }, [setOpen]);
+
+  // 🟢 1. REUSABLE FETCH FUNCTION
+  const fetchInvitation = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/api/invitations/me");
+
+      if (res.data?.invitation) {
+        setInvitation(res.data);
+
+        // Map custom DB data to your editor state
+        if (res.data.invitation.isCustom) {
+
+          let parsedData: any = { elements: [] };
+          if (typeof res.data.invitation.canvasData === 'string') {
+            try { parsedData = JSON.parse(res.data.invitation.canvasData); } catch (e) { parsedData = { elements: [] }; }
+          } else if (res.data.invitation.canvasData) {
+            parsedData = res.data.invitation.canvasData;
+          }
+
+          // Support legacy array saves AND new object saves
+          const elements = Array.isArray(parsedData) ? parsedData : (parsedData.elements || []);
+          const canvasSize = parsedData.canvasSize || { width: 800, height: 1200 };
+          const backgroundColor = parsedData.backgroundColor || "#ffffff";
+          const border = parsedData.border || undefined;
+
+          setSavedCustomInvitation({
+            id: res.data.invitation.id,
+            name: "My Custom Design",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            elements: elements,
+            canvasSize: canvasSize,
+            backgroundColor: backgroundColor,
+            border: border,
+            backgroundImage: res.data.invitation.customBackground
+              ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${res.data.invitation.customBackground}`
+              : undefined,
+            backgroundOpacity: 1,
+          });
+        }
+        setView("share");
+      } else {
+        setView("gallery");
+      }
+    } catch (e) {
+      console.error("Failed to load invitation", e);
+      setView("gallery");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadInvitation = async () => {
-      try {
-        const res = await api.get("/api/invitations/me");
-
-        if (res.data?.invitation) {
-          setInvitation(res.data);
-          setView("share");
-        } else {
-          setView("gallery");
-        }
-      } catch (e) {
-        console.error("Failed to load invitation", e);
-        setView("gallery");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadInvitation();
+    fetchInvitation();
   }, []);
-
 
   const handleSelectTemplate = async (templateId: string) => {
     try {
-      // 🟢 CASE 1: Invitation already exists → UPDATE template
+      // 🟢 FIX: Removed the !isCustom check. If an invite exists, ALWAYS patch it!
       if (invitation?.invitation?.id) {
         const res = await api.patch(
           `/api/invitations/${invitation.invitation.id}`,
           {
             templateId,
-            // reset styles so new template defaults apply
             styles: {},
           }
         );
-
         setInvitation(res.data);
         setSelectedTemplateId(templateId);
         setView("editor");
@@ -112,7 +156,6 @@ const Invitations = () => {
       console.error("Failed to select template", e);
     }
   };
-
 
   const handleSave = async (payload: {
     templateId: string;
@@ -135,10 +178,13 @@ const Invitations = () => {
     }
   };
 
-
   const handleEdit = () => {
     if (invitation) {
-      setView("editor");
+      if (invitation.invitation.isCustom) {
+        setView("custom-editor");
+      } else {
+        setView("editor");
+      }
     }
   };
 
@@ -150,7 +196,6 @@ const Invitations = () => {
     ? `${window.location.origin}/rsvp/${invitation.invitation.token}`
     : "";
 
-
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(invitationLink);
     setCopied(true);
@@ -161,12 +206,10 @@ const Invitations = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-
   const handleShareWhatsApp = () => {
     if (!invitation) return;
 
     const link = `${window.location.origin}/rsvp/${invitation.invitation.token}`;
-
     const names = invitation.invitation.content.names?.trim();
     const date = invitation.invitation.content.date?.trim();
 
@@ -175,7 +218,6 @@ const Invitations = () => {
     if (names) {
       message = `You're invited to ${names}'s wedding!\n\n`;
     }
-
     if (date) {
       message += `Date: ${date}\n\n`;
     }
@@ -189,34 +231,105 @@ const Invitations = () => {
     );
   };
 
+  // ---------------------------------------------------------
+  // VIEWS
+  // ---------------------------------------------------------
 
-  // Gallery View
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  // View 1: Custom Editor
+  if (view === "custom-editor") {
+    return (
+      <CustomEditorPage
+        onBack={() => {
+          setOpen(true);
+          // 🟢 3. RE-FETCH AFTER SAVE
+          if (invitation) {
+            fetchInvitation();
+          } else {
+            setView("gallery");
+          }
+        }}
+        initialData={savedCustomInvitation || undefined}
+        onCollapseSidebar={collapseSidebar}
+      />
+    );
+  }
+
+  // View 2: Gallery
   if (view === "gallery") {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Choose Your Invitation Template</h1>
+            <h1 className="text-2xl font-bold">Design Your Invitation</h1>
             <p className="text-muted-foreground">
-              Select from 50 beautiful templates to create your perfect wedding invitation
+              Choose a template or create your own custom design from scratch
             </p>
           </div>
-          {invitation && (
-            <Button variant="outline" onClick={() => setView("share")}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              View Saved Invitation
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {invitation && (
+              <Button variant="outline" onClick={() => setView("share")}>
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View Saved Invitation
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Create Your Own Section */}
+        <Card
+          className="border-2 border-dashed border-primary/40 bg-gradient-to-br from-primary/5 to-primary/10 hover:border-primary/60 transition-colors cursor-pointer group"
+          onClick={() => setView("custom-editor")}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center gap-6">
+              <div className="h-20 w-20 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <PaintBucket className="h-10 w-10 text-primary" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-semibold">Create Your Own</h3>
+                  <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded-full flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    New
+                  </span>
+                </div>
+                <p className="text-muted-foreground">
+                  Build a completely custom invitation from scratch. Add text, images, shapes, borders, and style everything your way.
+                </p>
+                <div className="flex gap-4 mt-3 text-sm text-muted-foreground">
+                  <span>✓ Custom fonts & colors</span>
+                  <span>✓ Upload your photos</span>
+                  <span>✓ Decorative shapes</span>
+                  <span>✓ Full control</span>
+                </div>
+              </div>
+              <Button size="lg" className="shrink-0">
+                Start Creating
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-sm text-muted-foreground font-medium">or choose a template</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
         <TemplateGallery
           onSelectTemplate={handleSelectTemplate}
-          selectedTemplateId={selectedTemplateId}
+          selectedTemplateId={selectedTemplateId || invitation?.invitation?.templateId}
         />
       </div>
     );
   }
 
-  // Editor View
+  // View 3: Standard Editor
   if (view === "editor" && invitation) {
     return (
       <TemplateEditor
@@ -242,11 +355,7 @@ const Invitations = () => {
     );
   }
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  // Share View (after saving)
+  // View 4: Share View (after saving standard templates)
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -259,7 +368,7 @@ const Invitations = () => {
           <Button variant="outline" onClick={handleChangeTemplate}>
             Change Template
           </Button>
-          <Link to={`/rsvp/${invitation.invitation.token}`} target="_blank">
+          <Link to={`/rsvp/${invitation?.invitation.token}`} target="_blank">
             <Button variant="outline">
               <ExternalLink className="h-4 w-4 mr-2" />
               Preview RSVP Page
@@ -275,11 +384,11 @@ const Invitations = () => {
             <CardTitle>Invitation Preview</CardTitle>
           </CardHeader>
           <CardContent>
-            {invitation?.template && invitation && (
+            {invitation && (
               <img
-                src={`${import.meta.env.VITE_API_URL}/api/invitations/${invitation.invitation.id}/render`}
+                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/invitations/${invitation.invitation.id}/render?t=${new Date(invitation.invitation.updatedAt || Date.now()).getTime()}`}
                 alt="Invitation Preview"
-                className="w-full max-w-sm mx-auto rounded-lg shadow-lg"
+                className="w-full max-w-sm mx-auto rounded-lg shadow-lg border border-border bg-white"
               />
             )}
           </CardContent>
@@ -329,25 +438,29 @@ const Invitations = () => {
               <h3 className="font-medium">Invitation Details</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Template</p>
-                  <p className="font-medium">{invitation.invitation.templateId}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Category</p>
-                  <p className="font-medium capitalize">
-                    {invitation.template.category}
+                  <p className="text-muted-foreground">Type</p>
+                  <p className="font-medium">
+                    {invitation?.invitation.isCustom ? "Custom Design" : "Template"}
                   </p>
                 </div>
+                {!invitation?.invitation.isCustom && (
+                  <div>
+                    <p className="text-muted-foreground">Category</p>
+                    <p className="font-medium capitalize">
+                      {invitation?.template?.category}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-muted-foreground">Date</p>
                   <p className="font-medium">
-                    {invitation.invitation.content.date || "Not set yet"}
+                    {invitation?.invitation.content?.date || "Not set yet"}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Time</p>
                   <p className="font-medium">
-                    {invitation.invitation.content.time || "Not set yet"}
+                    {invitation?.invitation.content?.time || "Not set yet"}
                   </p>
                 </div>
               </div>

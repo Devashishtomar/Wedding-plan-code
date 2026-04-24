@@ -13,6 +13,8 @@ import {
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { requireWeddingSetup } from "../middlewares/onboarding.middleware.js";
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { saveCustomInvitation } from '../controllers/customInvitation.controller.js';
+import { uploadLocal } from '../middlewares/upload.middleware.js';
 
 const router = express.Router();
 
@@ -29,6 +31,7 @@ router.get('/templates', requireAuth, requireWeddingSetup, asyncHandler(listTemp
 router.get('/templates/:id', requireAuth, requireWeddingSetup, asyncHandler(getTemplate));
 router.get('/design-options', requireAuth, requireWeddingSetup, asyncHandler(getDesignOptions));
 router.get('/:id/render', requireAuth, requireWeddingSetup, asyncHandler(renderInvitation));
+router.post('/custom', requireAuth, requireWeddingSetup, uploadLocal.single('background'), asyncHandler(saveCustomInvitation));
 
 
 export default router;
