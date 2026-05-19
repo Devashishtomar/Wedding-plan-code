@@ -3,7 +3,7 @@ import fs from "fs";
 import { getPrisma } from '../loaders/database.js';
 import { resolveInvitation } from "./invitationResolver.service.js";
 import { renderInvitationToImage } from "./invitationRender.service.js";
-import { renderCustomInvitationToImage } from "./customInvitationRender.service.js"; 
+import { renderCustomInvitationToImage } from "./customInvitationRender.service.js";
 
 export async function renderPublicInvitation(invitationId) {
     const prisma = getPrisma();
@@ -22,7 +22,7 @@ export async function renderPublicInvitation(invitationId) {
     }
 
     if (invitation.isCustom) {
-        return renderCustomInvitationToImage(invitation.id, invitation.wedding.userId);
+        return renderCustomInvitationToImage(invitation.id, invitation.weddingId);
     }
 
     // reuse existing resolver (SAFE)

@@ -1,141 +1,107 @@
 import { getPrisma } from '../loaders/database.js';
 
-
-export const listGuests = async ({ userId }) => {
+export const listGuests = async ({ visibilityFilter }) => {
     const prisma = getPrisma();
 
-    const wedding = await prisma.wedding.findFirst({
-        where: { userId },
-    });
-
-    if (!wedding) {
-        const error = new Error('Wedding not found');
-        error.statusCode = 404;
-        throw error;
-    }
-
     return prisma.guest.findMany({
-        where: { weddingId: wedding.id },
+        where: visibilityFilter,
         include: {
-            invites: true, // GuestInvite[]
+            invites: true,
+            event: { select: { name: true } }
         },
         orderBy: { createdAt: 'asc' },
     });
 };
 
-
-export const createGuest = async ({ userId, name, email }) => {
+export const createGuest = async ({ weddingId, eventId, userId, name, email, visibility }) => {
     const prisma = getPrisma();
-
-    const wedding = await prisma.wedding.findFirst({
-        where: { userId },
-    });
-
-    if (!wedding) {
-        const error = new Error('Wedding not found');
-        error.statusCode = 404;
-        throw error;
-    }
 
     return prisma.guest.create({
         data: {
-            weddingId: wedding.id,
+            weddingId,
+            eventId: eventId || null,
+            createdById: userId,
+            visibility,
             name,
             email: email || null,
         },
     });
 };
 
-
-
-export const updateGuest = async ({ userId, guestId, name, email }) => {
+export const updateGuest = async ({ weddingId, eventId, userId, guestId, name, email, visibility }) => {
     const prisma = getPrisma();
 
-    const wedding = await prisma.wedding.findFirst({
-        where: { userId },
-    });
-    if (!wedding) {
-        const err = new Error("Wedding not found");
-        err.statusCode = 404;
-        throw err;
-    }
-
-    // Resolve guest
     const guest = await prisma.guest.findUnique({
         where: { id: guestId },
         include: { invites: true },
     });
 
-    if (!guest || guest.weddingId !== wedding.id) {
-        const err = new Error("Guest not found");
+    if (!guest || guest.weddingId !== weddingId) {
+        const err = new Error('Guest not found in this workspace');
         err.statusCode = 404;
         throw err;
     }
 
     if (guest.invites.length > 0) {
-        const err = new Error(
-            "Cannot edit guest after invitation is sent"
-        );
+        const err = new Error("Cannot edit guest after invitation is sent");
         err.statusCode = 400;
         throw err;
     }
 
-    const updatedGuest = await prisma.guest.update({
-        where: { id: guest.id },
+    return prisma.guest.update({
+        where: { id: guestId },
         data: {
-            name,
-            email,
+            eventId: eventId !== undefined ? (eventId || null) : undefined,
+            name: name !== undefined ? name : undefined,
+            email: email !== undefined ? email : undefined,
+            visibility: visibility !== undefined ? visibility : undefined, // Pillar 3 Isolation
+            updatedById: userId, // Track responsibility for the move
         },
     });
-
-    return updatedGuest;
 };
 
-
-export const deleteGuest = async ({ userId, guestId }) => {
+export const deleteGuest = async ({ weddingId, guestId }) => {
     const prisma = getPrisma();
-
-    const wedding = await prisma.wedding.findFirst({
-        where: { userId },
-    });
-    if (!wedding) {
-        const err = new Error('Wedding not found');
-        err.statusCode = 404;
-        throw err;
-    }
 
     const guest = await prisma.guest.findUnique({
         where: { id: guestId },
-        include: {
-            invites: true,
-        },
+        include: { invites: true },
     });
 
-    if (!guest || guest.weddingId !== wedding.id) {
-        const err = new Error('Guest not found');
+    if (!guest || guest.weddingId !== weddingId) {
+        const err = new Error('Guest not found in this workspace');
         err.statusCode = 404;
         throw err;
     }
 
     if (guest.invites.length > 0) {
-        const err = new Error(
-            'Cannot delete guest after invitation is sent'
-        );
+        const err = new Error('Cannot delete guest after invitation is sent');
         err.statusCode = 400;
         throw err;
     }
 
-    if (guest.rsvp === 'ACCEPTED') {
-        const err = new Error(
-            'Cannot delete guest who has accepted the invitation'
-        );
-        err.statusCode = 400;
-        throw err;
-    }
+    return prisma.guest.delete({
+        where: { id: guestId },
+    });
+};
 
-    await prisma.guest.delete({
-        where: { id: guest.id },
+
+export const createGuestsBulk = async ({ weddingId, userId, guests, eventId, visibility }) => {
+    const prisma = getPrisma();
+
+    const guestData = guests.map(guest => ({
+        weddingId,
+        eventId: eventId === 'all' ? null : (eventId || null),
+        visibility: visibility || 'SHARED',
+        createdById: userId,
+        name: guest.name,
+        email: guest.email || null,
+    }));
+
+    const result = await prisma.guest.createMany({
+        data: guestData,
+        skipDuplicates: true,
     });
 
-    return true;
+    return result;
 };

@@ -3,8 +3,15 @@ import { getPrisma } from "../loaders/database.js";
 export const requireWeddingSetup = async (req, res, next) => {
     const prisma = getPrisma();
 
-    const wedding = await prisma.wedding.findFirst({
-        where: { userId: req.user.id },
+    if (!req.weddingId) {
+        return res.status(404).json({
+            success: false,
+            message: "Wedding workspace not found for this user",
+        });
+    }
+
+    const wedding = await prisma.wedding.findUnique({
+        where: { id: req.weddingId },
         select: { setupCompleted: true },
     });
 
@@ -14,7 +21,7 @@ export const requireWeddingSetup = async (req, res, next) => {
             message: "Wedding not found",
         });
     }
-
+    
     if (!wedding.setupCompleted) {
         return res.status(403).json({
             success: false,

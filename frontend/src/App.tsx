@@ -1,23 +1,29 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { WeddingGuard } from "@/utils/weddingGuard";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import WeddingSetup from "./pages/WeddingSetup";
-import Checklist from "./pages/Checklist";
-import Guests from "./pages/Guests";
-import PublicRSVP from "./pages/PublicRSVP";
-import Invitations from "./pages/Invitations";
-import Budget from "./pages/Budget";
-import AIAssistant from "./pages/AIAssistant";
-import AccountSettings from "./pages/AccountSettings";
-import AppLayout from "./components/layout/AppLayout";
-import NotFound from "./pages/NotFound";
+import { Skeleton } from "@/components/ui/skeleton";
+
+
+const Index = lazy(() => import("./pages/Index"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const WeddingSetup = lazy(() => import("./pages/WeddingSetup"));
+const Checklist = lazy(() => import("./pages/Checklist"));
+const Guests = lazy(() => import("./pages/Guests"));
+const PublicRSVP = lazy(() => import("./pages/PublicRSVP"));
+const Invitations = lazy(() => import("./pages/Invitations"));
+const Budget = lazy(() => import("./pages/Budget"));
+const AIAssistant = lazy(() => import("./pages/AIAssistant"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings"));
+const AppLayout = lazy(() => import("./components/layout/AppLayout"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+import { EventProvider } from "@/contexts/EventContext";
 
 const queryClient = new QueryClient();
 
@@ -27,30 +33,41 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* Public pages */}
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/wedding-setup" element={<WeddingSetup />} />
-          <Route path="/rsvp/:token" element={<PublicRSVP />} />
+        <EventProvider>
+          <Suspense fallback={<GlobalLoading />}>
+            <Routes>
+              {/* Public pages */}
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/wedding-setup" element={<WeddingSetup />} />
+              <Route path="/rsvp/:token" element={<PublicRSVP />} />
 
-          {/* App pages with sidebar layout */}
-          <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<WeddingGuard><Dashboard /></WeddingGuard>} />
-            <Route path="/checklist" element={<WeddingGuard><Checklist /></WeddingGuard>} />
-            <Route path="/guests" element={<WeddingGuard><Guests /></WeddingGuard>} />
-            <Route path="/invitations" element={<WeddingGuard><Invitations /></WeddingGuard>} />
-            <Route path="/budget" element={<WeddingGuard><Budget /></WeddingGuard>} />
-            <Route path="/assistant" element={<WeddingGuard><AIAssistant /></WeddingGuard>} />
-            <Route path="/account" element={<AccountSettings />} />
-          </Route>
+              {/* App pages with sidebar layout */}
+              <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<WeddingGuard><Dashboard /></WeddingGuard>} />
+                <Route path="/checklist" element={<WeddingGuard><Checklist /></WeddingGuard>} />
+                <Route path="/guests" element={<WeddingGuard><Guests /></WeddingGuard>} />
+                <Route path="/invitations" element={<WeddingGuard><Invitations /></WeddingGuard>} />
+                <Route path="/budget" element={<WeddingGuard><Budget /></WeddingGuard>} />
+                <Route path="/assistant" element={<WeddingGuard><AIAssistant /></WeddingGuard>} />
+                <Route path="/account" element={<AccountSettings />} />
+              </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </EventProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+);
+
+const GlobalLoading = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+    <Skeleton className="h-12 w-12 rounded-full" />
+    <Skeleton className="h-4 w-48" />
+  </div>
 );
 
 export default App;

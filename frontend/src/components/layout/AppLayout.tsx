@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Heart, LayoutDashboard, Settings, Users, Mail, DollarSign, MessageCircle, CheckSquare, User, LogOut, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,11 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useEvent } from "@/contexts/EventContext";
 import WeddingSetup from "@/pages/WeddingSetup";
 
+
+import EventSelector from "./EventSelector";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -49,6 +53,8 @@ const AppSidebar = () => {
   const location = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const queryClient = useQueryClient();
+  const { viewMode, selectedEventId } = useEvent();
 
   return (
     <Sidebar collapsible="icon">
@@ -74,7 +80,9 @@ const AppSidebar = () => {
                       isActive={isActive}
                       tooltip={item.label}
                     >
-                      <Link to={item.path}>
+                      <Link
+                        to={item.path}
+                      >
                         <item.icon className="h-5 w-5" />
                         <span>{item.label}</span>
                       </Link>
@@ -94,19 +102,16 @@ const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [editWeddingOpen, setEditWeddingOpen] = useState(false);
-  const [weddingData, setWeddingData] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchWedding = async () => {
-      try {
-        const res = await api.get("/api/weddings/me");
-        setWeddingData(res.data.wedding);
-      } catch { }
-    };
-
-    fetchWedding();
-  }, []);
+  const { data: weddingRes } = useQuery({
+    queryKey: ['wedding-me'],
+    queryFn: async () => {
+      const res = await api.get("/api/weddings/me");
+      return res.data;
+    }
+  });
 
 
   const handleLogout = async () => {
@@ -115,17 +120,15 @@ const AppLayout = () => {
     } catch {
       // even if this fails, proceed with logout
     } finally {
-      localStorage.removeItem("wedding_invitation_message");
-      localStorage.removeItem("wedding_details");
-      localStorage.removeItem("user_name");
-      localStorage.removeItem("user_email");
+      localStorage.clear();
+      queryClient.clear();
 
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
 
-      navigate("/login");
+      window.location.href = "/login";
     }
   };
 
@@ -150,11 +153,7 @@ const AppLayout = () => {
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
-                <h1 className="text-lg font-semibold">
-                  {location.pathname === "/account"
-                    ? "Account Settings"
-                    : navItems.find((item) => item.path === location.pathname)?.label || "Dashboard"}
-                </h1>
+                <EventSelector />
               </div>
 
               {/* Profile Dropdown */}
@@ -204,7 +203,7 @@ const AppLayout = () => {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <WeddingSetup
             isEditing
-            initialData={weddingData}
+            initialData={weddingRes?.wedding}
             onClose={() => setEditWeddingOpen(false)}
           />
         </DialogContent>

@@ -10,9 +10,9 @@ export const connectDB = async () => {
 
     try {
         await prisma.$connect();
-        logger.info('✅ Database connected');
+        logger.info('Database connected');
     } catch (error) {
-        logger.error(error, '❌ Database connection failed');
+        logger.error(error, 'Database connection failed');
         process.exit(1);
     }
 

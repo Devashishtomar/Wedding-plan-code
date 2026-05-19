@@ -14,7 +14,26 @@ export const requireAuth = async (req, res, next) => {
         const prisma = getPrisma();
         const user = await prisma.user.findUnique({
             where: { id: payload.userId },
-            select: { id: true, email: true },
+            select: {
+                id: true,
+                email: true,
+                weddingMembers: {
+                    select: {
+                        id: true,
+                        weddingId: true,
+                        role: true,
+                        side: true,
+                        canViewPrivate: true,
+                        canEditPrivate: true,
+                        canEditCombinedView: true,
+                        canEditGuests: true,
+                        canManageBudget: true,
+                        canManageEvents: true,
+                        privateTargetDate: true,
+                        privateTargetBudget: true
+                    }
+                }
+            },
         });
 
         if (!user) {
@@ -22,6 +41,12 @@ export const requireAuth = async (req, res, next) => {
         }
 
         req.user = user;
+
+        if (user.weddingMembers && user.weddingMembers.length > 0) {
+            req.weddingId = user.weddingMembers[0].weddingId;
+            req.memberContext = user.weddingMembers[0];
+        }
+
         next();
     } catch {
         return res.status(401).json({ message: 'Unauthorized' });

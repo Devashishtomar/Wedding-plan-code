@@ -13,13 +13,14 @@ export const submitRSVP = async ({ token, name, response }) => {
         throw err;
     }
 
-    const weddingId = invitation.weddingId;
-
     return prisma.guest.create({
         data: {
-            weddingId,
+            weddingId: invitation.weddingId,
+            eventId: invitation.eventId || null,
+            visibility: invitation.visibility,
+            createdById: invitation.createdById,
             name,
-            email: null, // explicit public response
+            email: null,
             rsvp: response === 'yes' ? 'ACCEPTED' : 'DECLINED',
         },
     });
@@ -66,12 +67,8 @@ export const resolveRSVPToken = async ({ token }) => {
             guest: true,
             invitation: {
                 include: {
-                    wedding: {
-                        select: {
-                            date: true,
-                            location: true,
-                        },
-                    },
+                    wedding: { select: { date: true, location: true } },
+                    event: { select: { name: true, date: true, location: true } } // Fetch Event Context
                 },
             },
         },
@@ -87,6 +84,7 @@ export const resolveRSVPToken = async ({ token }) => {
                 invitationId: guestInvite.invitation.id,
                 message: guestInvite.invitation.message,
                 wedding: guestInvite.invitation.wedding,
+                event: guestInvite.invitation.event,
             },
             alreadyResponded: !!guestInvite.respondedAt,
         };
@@ -96,12 +94,8 @@ export const resolveRSVPToken = async ({ token }) => {
     const invitation = await prisma.invitation.findUnique({
         where: { token },
         include: {
-            wedding: {
-                select: {
-                    date: true,
-                    location: true,
-                },
-            },
+            wedding: { select: { date: true, location: true } },
+            event: { select: { name: true, date: true, location: true } } // Fetch Event Context
         },
     });
 
@@ -112,6 +106,7 @@ export const resolveRSVPToken = async ({ token }) => {
                 invitationId: invitation.id,
                 message: invitation.message,
                 wedding: invitation.wedding,
+                event: invitation.event,
             },
         };
     }

@@ -18,8 +18,9 @@ const PublicRSVP = () => {
   const [mode, setMode] = useState<"public" | "private" | null>(null);
   const [alreadyResponded, setAlreadyResponded] = useState(false);
   const [invitationId, setInvitationId] = useState<string | null>(null);
+  const [eventName, setEventName] = useState<string>("All Events");
   const invitationImageUrl = invitationId
-    ? `${import.meta.env.VITE_API_URL}/api/public/invitations/${invitationId}/render`
+    ? `${import.meta.env.VITE_API_URL}/api/public/invitations/${invitationId}/render?t=${Date.now()}`
     : null;
 
 
@@ -36,6 +37,11 @@ const PublicRSVP = () => {
 
         setMode(res.data.mode);
         setInvitationId(res.data.invitation?.invitationId);
+
+        // FIXED: Safely extract and set the isolated Event Name from the backend payload
+        if (res.data.invitation?.event?.name) {
+          setEventName(res.data.invitation.event.name);
+        }
 
         if (res.data.mode === "private") {
           setName(res.data.guest.name);
@@ -145,9 +151,11 @@ const PublicRSVP = () => {
                 <div className="flex justify-center mb-4">
                   <Heart className="h-12 w-12 text-primary" />
                 </div>
-                <CardTitle className="text-2xl">You're Invited!</CardTitle>
+                <CardTitle className="text-2xl">RSVP</CardTitle>
                 <CardDescription>
-                  Please let us know if you'll be joining us on our special day.
+                  {eventName === "All Events"
+                    ? "We can't wait to celebrate with you!"
+                    : `You are invited to our ${eventName}!`}
                 </CardDescription>
               </CardHeader>
 

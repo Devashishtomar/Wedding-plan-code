@@ -65,10 +65,18 @@ function validateTemplateMeta(meta, templateId) {
     }
 
     meta.textFields.forEach((field, index) => {
-        if (!field.key || !field.default || !field.constraints) {
+        if (!field.key || !field.default) {
             throw new Error(
-                `Invalid meta.json (${templateId}): textFields[${index}] incomplete`
+                `Invalid meta.json (${templateId}): textFields[${index}] missing key or default`
             );
+        }
+
+        if (!field.constraints) {
+            field.constraints = {
+                fontSize: { min: 10, max: 120 },
+                yOffset: { min: -200, max: 200 },
+                allowBold: true
+            };
         }
 
         if (typeof field.default.x !== "number" || typeof field.default.y !== "number") {

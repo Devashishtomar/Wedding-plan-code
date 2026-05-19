@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { api } from "@/lib/api"; // 🟢 ADDED API IMPORT
+import { api } from "@/lib/api";
+import { useEvent } from "@/contexts/EventContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   CustomInvitationData,
   CanvasElement,
@@ -23,6 +25,8 @@ interface CustomEditorPageProps {
 
 const CustomEditorPage = ({ onBack, initialData, onCollapseSidebar }: CustomEditorPageProps) => {
   const { toast } = useToast();
+  const { selectedEventId, viewMode } = useEvent();
+  const { role } = usePermissions();
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
@@ -185,6 +189,20 @@ const CustomEditorPage = ({ onBack, initialData, onCollapseSidebar }: CustomEdit
         border: invitation.border
       };
       formData.append('canvasData', JSON.stringify(payload));
+
+      // Append strict event and isolation data
+      if (selectedEventId && selectedEventId !== 'all') {
+        formData.append('eventId', selectedEventId);
+      }
+
+      const visibility = viewMode === 'individual'
+        ? (role === 'BRIDE' ? 'BRIDE_PRIVATE' : 'GROOM_PRIVATE')
+        : 'SHARED';
+      formData.append('visibility', visibility);
+
+      if (initialData?.id) {
+        formData.append('invitationId', initialData.id);
+      }
 
       if (invitation.backgroundImage && invitation.backgroundImage.startsWith('data:image')) {
         const res = await fetch(invitation.backgroundImage);

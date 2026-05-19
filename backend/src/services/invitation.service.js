@@ -10,107 +10,115 @@ const TEMPLATES_ROOT = path.join(process.cwd(), 'templates/processed');
 const generateToken = () =>
     crypto.randomBytes(32).toString('hex');
 
-export const getMyInvitation = async ({ userId }) => {
+export const getInvitations = async ({ visibilityFilter }) => {
     const prisma = getPrisma();
 
-    const wedding = await prisma.wedding.findFirst({
-        where: { userId },
+    const invitations = await prisma.invitation.findMany({
+        where: visibilityFilter,
+        orderBy: { createdAt: 'desc' }
     });
 
-    if (!wedding) return null;
+    if (!invitations || invitations.length === 0) return [];
 
-    const invitation = await prisma.invitation.findUnique({
-        where: { weddingId: wedding.id },
-    });
+    return invitations.map(invitation => {
+        if (invitation.isCustom) {
+            return {
+                invitation: {
+                    id: invitation.id,
+                    weddingId: invitation.weddingId,
+                    eventId: invitation.eventId,
+                    visibility: invitation.visibility,
+                    token: invitation.token,
+                    templateId: invitation.templateId,
+                    isCustom: true,
+                    canvasData: invitation.canvasData,
+                    customBackground: invitation.customBackground,
+                    createdAt: invitation.createdAt,
+                    updatedAt: invitation.updatedAt,
+                },
+                template: null,
+                resolvedFields: {}
+            };
+        }
 
-    if (!invitation) return null;
+        const template = invitation.templateId ? loadTemplateMeta(invitation.templateId) : null;
 
-    if (invitation.isCustom) {
         return {
             invitation: {
                 id: invitation.id,
                 weddingId: invitation.weddingId,
+                eventId: invitation.eventId,
+                visibility: invitation.visibility,
                 token: invitation.token,
-                templateId: invitation.templateId, 
-                isCustom: true,
-                canvasData: invitation.canvasData,
-                customBackground: invitation.customBackground,
-                createdAt: invitation.createdAt,
-                updatedAt: invitation.updatedAt,
+                templateId: invitation.templateId,
+                content: {
+                    title: invitation.title,
+                    names: invitation.names,
+                    message: invitation.message,
+                    date: invitation.date,
+                    time: invitation.time,
+                    venue: invitation.venue,
+                    rsvpDate: invitation.rsvpDate,
+                },
+                styles: invitation.styles || {},
+                globalFontFamily: invitation.globalFontFamily || null,
             },
-            template: null, 
-            resolvedFields: {}
+            template,
+            resolvedFields: null,
         };
-    }
-
-    if (!invitation.templateId) return null;
-
-    const template = loadTemplateMeta(invitation.templateId);
-
-    return {
-        invitation: {
-            id: invitation.id,
-            weddingId: invitation.weddingId,
-            token: invitation.token,
-            templateId: invitation.templateId,
-
-            content: {
-                title: invitation.title,
-                names: invitation.names,
-                message: invitation.message,
-                date: invitation.date,
-                time: invitation.time,
-                venue: invitation.venue,
-                rsvpDate: invitation.rsvpDate,
-            },
-
-            styles: invitation.styles || {},
-            globalFontFamily: invitation.globalFontFamily || null,
-        },
-        template,
-        resolvedFields: null,
-    };
+    });
 };
 
-
-export const createInvitation = async ({ userId, message, templateId, content, styles, globalFontFamily, }) => {
+export const createInvitation = async ({ weddingId, eventId, visibility, userId, message, templateId, content, styles, globalFontFamily }) => {
     const prisma = getPrisma();
 
-    const wedding = await prisma.wedding.findFirst({
-        where: { userId },
-    });
-
-    if (!wedding) {
-        const err = new Error('Wedding not found');
-        err.statusCode = 404;
-        throw err;
-    }
-
-    // 🔒 Guarantee ONE invitation per wedding
-    const existing = await prisma.invitation.findUnique({
-        where: { weddingId: wedding.id },
+    const existing = await prisma.invitation.findFirst({
+        where: {
+            weddingId,
+            eventId: eventId || null,
+            visibility,
+        },
     });
 
     if (existing) {
-        const template = loadTemplateMeta(existing.templateId);
+        const updated = await prisma.invitation.update({
+            where: { id: existing.id },
+            data: {
+                templateId,
+                updatedById: userId,
+                title: content?.title ?? existing.title,
+                names: content?.names ?? existing.names,
+                message: content?.message ?? message ?? existing.message,
+                date: content?.date ?? existing.date,
+                time: content?.time ?? existing.time,
+                venue: content?.venue ?? existing.venue,
+                rsvpDate: content?.rsvpDate ?? existing.rsvpDate,
+                styles: styles || existing.styles,
+                globalFontFamily: globalFontFamily || existing.globalFontFamily,
+            }
+        });
+
+        const template = loadTemplateMeta(updated.templateId);
 
         return {
             invitation: {
-                id: existing.id,
-                weddingId: existing.weddingId,
-                token: existing.token,
-                templateId: existing.templateId,
+                id: updated.id,
+                weddingId: updated.weddingId,
+                eventId: updated.eventId,
+                visibility: updated.visibility,
+                token: updated.token,
+                templateId: updated.templateId,
                 content: {
-                    title: existing.title,
-                    names: existing.names,
-                    message: existing.message,
-                    date: existing.date,
-                    time: existing.time,
-                    venue: existing.venue,
-                    rsvpDate: existing.rsvpDate,
+                    title: updated.title,
+                    names: updated.names,
+                    message: updated.message,
+                    date: updated.date,
+                    time: updated.time,
+                    venue: updated.venue,
+                    rsvpDate: updated.rsvpDate,
                 },
-                styles: existing.styles || {},
-                globalFontFamily: existing.globalFontFamily || null,
+                styles: updated.styles || {},
+                globalFontFamily: updated.globalFontFamily || null,
             },
             template,
             resolvedFields: null,
@@ -119,8 +127,10 @@ export const createInvitation = async ({ userId, message, templateId, content, s
 
     const invitation = await prisma.invitation.create({
         data: {
-            weddingId: wedding.id,
-            userId,
+            weddingId,
+            eventId: eventId || null,
+            createdById: userId,
+            visibility,
             message: content?.message ?? '',
             templateId,
             title: content?.title,
@@ -131,7 +141,6 @@ export const createInvitation = async ({ userId, message, templateId, content, s
             rsvpDate: content?.rsvpDate,
             styles,
             globalFontFamily,
-
             token: generateToken(),
         },
     });
@@ -142,6 +151,8 @@ export const createInvitation = async ({ userId, message, templateId, content, s
         invitation: {
             id: invitation.id,
             weddingId: invitation.weddingId,
+            eventId: invitation.eventId,
+            visibility: invitation.visibility,
             token: invitation.token,
             templateId: invitation.templateId,
             content: {
@@ -161,16 +172,15 @@ export const createInvitation = async ({ userId, message, templateId, content, s
     };
 };
 
-export const updateInvitation = async ({ userId, invitationId, message, templateId, content, styles, globalFontFamily, }) => {
+export const updateInvitation = async ({ weddingId, userId, invitationId, message, templateId, content, styles, globalFontFamily }) => {
     const prisma = getPrisma();
 
     const invite = await prisma.invitation.findUnique({
-        where: { id: invitationId },
-        include: { wedding: true },
+        where: { id: invitationId }
     });
 
-    if (!invite || invite.wedding.userId !== userId) {
-        const err = new Error('Invitation not found');
+    if (!invite || invite.weddingId !== weddingId) {
+        const err = new Error('Invitation not found in this workspace');
         err.statusCode = 404;
         throw err;
     }
@@ -188,6 +198,7 @@ export const updateInvitation = async ({ userId, invitationId, message, template
             rsvpDate: content?.rsvpDate,
             styles,
             globalFontFamily,
+            updatedById: userId,
         },
     });
 
@@ -264,16 +275,14 @@ export const getInvitationTemplateById = async (templateId) => {
 
 export const renderInvitationImage = async ({
     invitationId,
-    userId,
+    weddingId,
 }) => {
     const prisma = getPrisma();
 
     const invitation = await prisma.invitation.findFirst({
         where: {
             id: invitationId,
-            wedding: {
-                userId,
-            },
+            weddingId,
         },
     });
 

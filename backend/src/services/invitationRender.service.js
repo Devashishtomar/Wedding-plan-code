@@ -122,7 +122,9 @@ export async function renderInvitationToImage(invitationResponse) {
     },
   });
 
-  fs.unlinkSync(tempHtmlPath);
+  if (fs.existsSync(tempHtmlPath)) {
+    fs.unlinkSync(tempHtmlPath);
+  }
 
   await browser.close();
 

@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEvent } from "@/contexts/EventContext";
+
 
 interface Message {
   id: string;
@@ -25,6 +27,8 @@ const suggestedQuestions = [
 
 const AIAssistant = () => {
   const { toast } = useToast();
+  const { selectedEventId, viewMode } = useEvent(); // FIXED: Extract the active tab and event dropdown state
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -52,7 +56,10 @@ const AIAssistant = () => {
     setIsThinking(true);
 
     try {
-      const aiResponse = await sendAIMessage(text);
+      const targetEventId = selectedEventId === 'all' ? 'all' : selectedEventId;
+      const targetView = viewMode === 'individual' ? 'PRIVATE' : 'SHARED';
+
+      const aiResponse = await sendAIMessage(text, targetEventId, targetView);
 
       if (aiResponse.type === "MESSAGE") {
         setMessages((prev) => [

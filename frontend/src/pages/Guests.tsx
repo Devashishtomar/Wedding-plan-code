@@ -11,18 +11,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, X, Users, UserCheck, Clock, UserX, Mail, FileEdit, Send, LinkIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { useEvent } from "@/contexts/EventContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
+import { usePermissions } from "@/hooks/usePermissions";
+import { cn } from "@/lib/utils";
 
 interface Guest {
   id: string;
   name: string;
   email: string | null;
   rsvp: "PENDING" | "ACCEPTED" | "DECLINED";
+  visibility: string;
   invites: {
     id: string;
     status: string;
     sentAt: string | null;
   }[];
+  eventId: string | null;
+  event?: {
+    name: string;
+  };
 }
 
 interface PublicRSVP {
@@ -30,76 +46,105 @@ interface PublicRSVP {
   name: string;
   attending: boolean;
   submittedAt: string;
+  eventName?: string;
 }
-
 
 const Guests = () => {
   const { toast } = useToast();
-  const [guests, setGuests] = useState<Guest[]>([]);
+  const { canEditGuests: canManageGuests, role } = usePermissions();
+  const queryClient = useQueryClient();
   const [sendingInvite, setSendingInvite] = useState<Record<string, boolean>>({});
   const [newGuest, setNewGuest] = useState({ name: "", email: "" });
   const [showForm, setShowForm] = useState(false);
   const [isInvitationFilled, setIsInvitationFilled] = useState(false);
   const [rsvpResponses, setRsvpResponses] = useState<PublicRSVP[]>([]);
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", email: "" });
+  const [editForm, setEditForm] = useState({ id: "", name: "", email: "" });
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [confirmDeleteGuest, setConfirmDeleteGuest] = useState<Guest | null>(null);
+  const [newGuestEventId, setNewGuestEventId] = useState<string>("none");
+  const { selectedEventId, viewMode, selectedEvent, events } = useEvent();
 
+  const { data: guestsData, isLoading: isGuestsLoading } = useQuery({
+    queryKey: ['guests', viewMode, selectedEventId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('view', viewMode === 'individual' ? 'PRIVATE' : 'SHARED');
 
-  useEffect(() => {
-    const loadGuests = async () => {
-      const res = await api.get("/api/guests");
-      setGuests(res.data.guests);
-    };
+      if (selectedEventId && selectedEventId !== 'all') {
+        params.append('eventId', selectedEventId);
+      }
 
-    loadGuests();
-  }, []);
+      const res = await api.get(`/api/guests?${params.toString()}`);
+      return res.data;
+    },
+    staleTime: 60 * 1000,
+  });
 
+  const guests: Guest[] = guestsData?.guests || [];
 
-  useEffect(() => {
-    const checkInvitation = async () => {
+  const { data: inviteData } = useQuery({
+    queryKey: ['invitation-status', viewMode, selectedEventId],
+    queryFn: async () => {
       try {
-        const res = await api.get("/api/invitations/me");
-        setIsInvitationFilled(!!res.data.invitation);
+        const res = await api.get(`/api/invitations/me?view=${viewMode === 'individual' ? 'PRIVATE' : 'SHARED'}`);
+        const invitations = res.data.invitations || [];
+
+        const targetEventId = selectedEventId === 'all' ? null : selectedEventId;
+        const currentInvite = invitations.find((inv: any) => inv.invitation.eventId === targetEventId);
+
+        setIsInvitationFilled(!!currentInvite);
+        return invitations;
       } catch {
         setIsInvitationFilled(false);
+        return null;
       }
-    };
+    },
+  });
 
-    checkInvitation();
-  }, []);
+  const { data: rsvpData } = useQuery({
+    queryKey: ['public-rsvp', viewMode, selectedEventId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('view', viewMode === 'individual' ? 'PRIVATE' : 'SHARED');
 
-  useEffect(() => {
-    const loadPublicResponses = async () => {
-      const res = await api.get("/api/rsvp/public");
+      if (selectedEventId && selectedEventId !== 'all') {
+        params.append('eventId', selectedEventId);
+      }
+
+      const res = await api.get(`/api/rsvp/public?${params.toString()}`);
       setRsvpResponses(res.data.responses);
-    };
-
-    loadPublicResponses();
-  }, []);
+      return res.data;
+    },
+  });
 
 
   const handleSendEmail = async (guest: Guest) => {
-    if (sendingInvite[guest.id]) return;
-
     setSendingInvite((prev) => ({ ...prev, [guest.id]: true }));
-
     try {
-      await api.post(`/api/guests/${guest.id}/send-invite`);
+      const targetEventId = selectedEventId === 'all' ? null : selectedEventId;
+      const currentInvite = inviteData?.find((inv: any) => inv.invitation.eventId === targetEventId);
 
-      const res = await api.get("/api/guests");
-      setGuests(res.data.guests);
+      if (!currentInvite?.invitation?.id) {
+        toast({ title: "Error", description: "No active invitation found to send.", variant: "destructive" });
+        setSendingInvite((prev) => ({ ...prev, [guest.id]: false }));
+        return;
+      }
 
-      toast({
-        title: "Email Sent",
-        description: `Invitation email sent to ${guest.name}.`,
+      await api.post(`/api/guests/${guest.id}/send-invite`, {
+        invitationId: currentInvite.invitation.id
       });
-    } catch {
+
       toast({
-        title: "Failed to send email",
-        description: "Please try again later.",
+        title: "Invitation Sent",
+        description: `Successfully sent to ${guest.name}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['guests'] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to send invitation",
         variant: "destructive",
       });
     } finally {
@@ -110,9 +155,25 @@ const Guests = () => {
   const handleAddGuest = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await api.post("/api/guests", newGuest);
+    const visibility = viewMode === 'individual'
+      ? (role === 'BRIDE' ? 'BRIDE_PRIVATE' : 'GROOM_PRIVATE')
+      : 'SHARED';
 
-    setGuests(prev => [...prev, res.data.guest]);
+    const resolvedEventId = selectedEventId === 'all'
+      ? (newGuestEventId === "none" ? null : newGuestEventId)
+      : selectedEventId;
+
+    const res = await api.post("/api/guests", {
+      name: newGuest.name,
+      email: newGuest.email,
+      visibility: visibility,
+      eventId: resolvedEventId,
+    });
+
+    await queryClient.invalidateQueries({ queryKey: ['guests'] });
+    await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
+    // FIXED: Removed the buggy setGuests optimistic update
     setNewGuest({ name: "", email: "" });
     setShowForm(false);
 
@@ -138,7 +199,11 @@ const Guests = () => {
     if ((guest.invites?.length ?? 0) > 0) return;
 
     setEditingGuest(guest);
-    setEditForm({ name: guest.name, email: guest.email || "" });
+    setEditForm({
+      id: guest.id,
+      name: guest.name,
+      email: guest.email || "",
+    });
   };
 
   const handleSaveEdit = async () => {
@@ -146,13 +211,10 @@ const Guests = () => {
 
     setIsSavingEdit(true);
     try {
-      const res = await api.patch(`/api/guests/${editingGuest.id}`, editForm);
+      await api.patch(`/api/guests/${editingGuest.id}`, editForm);
 
-      setGuests((prev) =>
-        prev.map((g) =>
-          g.id === editingGuest.id ? res.data.guest : g
-        )
-      );
+      await queryClient.invalidateQueries({ queryKey: ['guests'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 
       toast({
         title: "Guest updated",
@@ -178,8 +240,7 @@ const Guests = () => {
     if ((confirmDeleteGuest.invites?.length ?? 0) > 0) {
       toast({
         title: "Action not allowed",
-        description:
-          "You cannot delete a guest after an invitation has been sent.",
+        description: "You cannot delete a guest after an invitation has been sent.",
         variant: "destructive",
       });
       setConfirmDeleteGuest(null);
@@ -189,8 +250,7 @@ const Guests = () => {
     if (confirmDeleteGuest.rsvp === "ACCEPTED") {
       toast({
         title: "Action not allowed",
-        description:
-          "You cannot delete a guest who has accepted the invitation.",
+        description: "You cannot delete a guest who has accepted the invitation.",
         variant: "destructive",
       });
       setConfirmDeleteGuest(null);
@@ -199,26 +259,22 @@ const Guests = () => {
 
     const guestId = confirmDeleteGuest.id;
 
+    setConfirmDeleteGuest(null);
     setIsDeleting(guestId);
+
     try {
       await api.delete(`/api/guests/${guestId}`);
-
-      setGuests((prev) => prev.filter((g) => g.id !== guestId));
-
-      toast({
-        title: "Guest removed",
-        description: "Guest has been deleted.",
-      });
+      await queryClient.invalidateQueries({ queryKey: ['guests'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast({ title: "Guest removed", description: "Guest has been deleted." });
     } catch (error: any) {
       toast({
         title: "Delete failed",
-        description:
-          error.response?.data?.message || "Please try again.",
+        description: error.response?.data?.message || "Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsDeleting(null);
-      setConfirmDeleteGuest(null);
     }
   };
 
@@ -226,7 +282,9 @@ const Guests = () => {
   const publicGuests = guests.filter(g => g.email === null);
 
   const stats = {
-    total: privateGuests.length,
+    total: selectedEventId === 'all'
+      ? new Set(privateGuests.map(g => g.email || g.name)).size
+      : privateGuests.length,
     confirmed: privateGuests.filter(g => g.rsvp === "ACCEPTED").length,
     pending: privateGuests.filter(g => g.rsvp === "PENDING").length,
     declined: privateGuests.filter(g => g.rsvp === "DECLINED").length,
@@ -238,17 +296,30 @@ const Guests = () => {
     notAttending: rsvpResponses.filter(r => !r.attending).length,
   };
 
+  if (isGuestsLoading && !guestsData) {
+    return <GuestSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Guest List</h1>
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? <X className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-          {showForm ? "Cancel" : "Add Guest"}
-        </Button>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Guest List</h1>
+          <p className="text-muted-foreground">
+            {viewMode === 'individual' && selectedEvent
+              ? `Guest attending the ${selectedEvent.name}`
+              : "Manage all guests across your entire wedding."}
+          </p>
+        </div>
+        {canManageGuests && (
+          <Button onClick={() => setShowForm(!showForm)}>
+            {showForm ? <X className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+            {showForm ? "Cancel" : "Add Guest"}
+          </Button>
+        )}
       </div>
 
-      {showForm && (
+      {showForm && canManageGuests && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Add New Guest</CardTitle>
@@ -277,6 +348,23 @@ const Guests = () => {
                     required
                   />
                 </div>
+                {/* FIXED: The Specific Event Law - Only ask for the Event if we are in "All Events" */}
+                {viewMode === 'collaborative' && selectedEventId === 'all' && (
+                  <div className="flex-1 space-y-2">
+                    <Label>Event</Label>
+                    <Select value={newGuestEventId} onValueChange={setNewGuestEventId}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select Event" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="none">All Events</SelectItem>
+                        {events.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="flex items-end">
                   <Button type="submit">Add Guest</Button>
                 </div>
@@ -373,86 +461,144 @@ const Guests = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {privateGuests.map((guest) => {
-                    const hasInviteBeenSent = (guest.invites?.length ?? 0) > 0;
-                    const isRsvpAccepted = guest.rsvp === "ACCEPTED";
-                    return (
-                      <TableRow key={guest.id}>
-                        <TableCell className="font-medium">{guest.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{guest.email}</TableCell>
-                        <TableCell>
-                          {(guest.invites?.length ?? 0) > 0 ? (
-                            <Badge variant="outline" className="text-green-600 border-green-200">
-                              <Mail className="h-3 w-3 mr-1" />
-                              Sent
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-yellow-600 border-yellow-200">
-                              Not Sent
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(
-                          guest.rsvp === "ACCEPTED"
-                            ? "confirmed"
-                            : guest.rsvp === "DECLINED"
-                              ? "declined"
-                              : "pending"
-                        )
-                        }</TableCell>
-                        <TableCell className="text-right space-x-2">
-                          {(guest.invites?.length ?? 0) === 0 && (
-                            isInvitationFilled ? (
-                              <Button size="sm" disabled={sendingInvite[guest.id]} onClick={() => handleSendEmail(guest)}>
-                                <Send className="h-3 w-3 mr-1" />
-                                Send Email
-                              </Button>
-                            ) : (
-                              <Link to="/invitations">
-                                <Button size="sm" variant="outline">
-                                  <FileEdit className="h-3 w-3 mr-1" />
-                                  Fill Invitation
-                                </Button>
-                              </Link>
-                            )
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={hasInviteBeenSent}
-                            title={
-                              hasInviteBeenSent
-                                ? "Editing is disabled after an invite is sent"
-                                : "Edit guest"
-                            }
-                            onClick={() => openEditGuest(guest)}
-                          >
-                            <FileEdit className="h-3 w-3" />
-                          </Button>
+                  {(() => {
+                    // FIXED: The Merging Law
+                    const displayGuests = selectedEventId === 'all' ? (() => {
+                      const map = new Map();
+                      privateGuests.forEach(g => {
+                        const key = g.email || g.name; // Merge by email
+                        if (!map.has(key)) {
+                          map.set(key, {
+                            ...g,
+                            eventNames: [g.event?.name || 'All Events'],
+                            allRsvps: [g.rsvp],
+                            anyInviteSent: (g.invites?.length ?? 0) > 0
+                          });
+                        } else {
+                          const existing = map.get(key);
+                          existing.eventNames.push(g.event?.name || 'All Events');
+                          existing.allRsvps.push(g.rsvp);
+                          existing.anyInviteSent = existing.anyInviteSent || (g.invites?.length ?? 0) > 0;
+                        }
+                      });
+                      return Array.from(map.values());
+                    })() : privateGuests.map(g => ({
+                      ...g,
+                      eventNames: [g.event?.name || 'All Events'],
+                      allRsvps: [g.rsvp],
+                      anyInviteSent: (g.invites?.length ?? 0) > 0
+                    }));
 
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={
-                              isDeleting === guest.id ||
-                              hasInviteBeenSent ||
-                              isRsvpAccepted
-                            }
-                            title={
-                              hasInviteBeenSent
-                                ? "Cannot delete a guest after an invite is sent"
-                                : isRsvpAccepted
-                                  ? "Cannot delete a guest who has accepted the invitation"
-                                  : "Delete guest"
-                            }
-                            onClick={() => setConfirmDeleteGuest(guest)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                    return displayGuests.map((guest: any) => {
+                      const hasInviteBeenSent = guest.anyInviteSent;
+                      const isRsvpAccepted = guest.allRsvps.includes("ACCEPTED");
+
+                      // Calculate Aggregate RSVP Logic
+                      const rsvps = guest.allRsvps;
+                      const accepted = rsvps.filter((r: string) => r === "ACCEPTED").length;
+                      const declined = rsvps.filter((r: string) => r === "DECLINED").length;
+                      const pending = rsvps.filter((r: string) => r === "PENDING").length;
+
+                      return (
+                        <TableRow key={guest.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span>{guest.name}</span>
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {guest.eventNames.map((evtName: string, idx: number) => (
+                                  <Badge key={idx} variant="outline" className={cn(
+                                    "text-[9px] uppercase font-bold py-0 h-4 border-primary/20",
+                                    evtName === 'All Events' ? "bg-muted text-muted-foreground" : "bg-primary/5 text-primary"
+                                  )}>
+                                    {evtName}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{guest.email}</TableCell>
+                          <TableCell>
+                            {hasInviteBeenSent ? (
+                              <Badge variant="outline" className="text-green-600 border-green-200">
+                                <Mail className="h-3 w-3 mr-1" />
+                                Sent
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-yellow-600 border-yellow-200">
+                                Not Sent
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {/* FIXED: Aggregate RSVP Display Logic */}
+                            {rsvps.length === 1 ? (
+                              getStatusBadge(rsvps[0] === "ACCEPTED" ? "confirmed" : rsvps[0] === "DECLINED" ? "declined" : "pending")
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {accepted === rsvps.length ? (
+                                  <Badge className="bg-green-100 text-green-800">Confirmed ({accepted})</Badge>
+                                ) : declined === rsvps.length ? (
+                                  <Badge variant="destructive">Declined ({declined})</Badge>
+                                ) : (
+                                  <>
+                                    {accepted > 0 && <Badge className="bg-green-100 text-green-800">Confirmed ({accepted})</Badge>}
+                                    {declined > 0 && <Badge variant="destructive">Declined ({declined})</Badge>}
+                                    {pending > 0 && <Badge variant="secondary">Pending ({pending})</Badge>}
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
+                            {canManageGuests && (
+                              <>
+                                {/* FIXED: Hide Send/Fill actions when in All Events view to prevent bulk confusion */}
+                                {selectedEventId !== 'all' && !hasInviteBeenSent && (
+                                  isInvitationFilled ? (
+                                    <Button size="sm" disabled={sendingInvite[guest.id]} onClick={() => handleSendEmail(guest)}>
+                                      <Send className="h-3 w-3 mr-1" />
+                                      Send Email
+                                    </Button>
+                                  ) : (
+                                    <Link to="/invitations">
+                                      <Button size="sm" variant="outline">
+                                        <FileEdit className="h-3 w-3 mr-1" />
+                                        Fill Invitation
+                                      </Button>
+                                    </Link>
+                                  )
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={hasInviteBeenSent}
+                                  title={hasInviteBeenSent ? "Editing is disabled after an invite is sent" : "Edit guest"}
+                                  onClick={() => openEditGuest(guest)}
+                                >
+                                  <FileEdit className="h-3 w-3" />
+                                </Button>
+                                {(selectedEventId !== 'all' || (selectedEventId === 'all' && !guest.eventId)) && (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    disabled={isDeleting === guest.id || hasInviteBeenSent || isRsvpAccepted}
+                                    title={
+                                      hasInviteBeenSent ? "Cannot delete a guest after an invite is sent"
+                                        : isRsvpAccepted ? "Cannot delete a guest who has accepted the invitation"
+                                          : "Delete guest"
+                                    }
+                                    onClick={() => setConfirmDeleteGuest(guest)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
                 </TableBody>
               </Table>
             </CardContent>
@@ -530,7 +676,18 @@ const Guests = () => {
                   <TableBody>
                     {rsvpResponses.map((response) => (
                       <TableRow key={response.id}>
-                        <TableCell className="font-medium">{response.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span>{response.name}</span>
+                            {selectedEventId === 'all' && response.eventName && (
+                              <div className="mt-1">
+                                <Badge variant="outline" className="text-[9px] uppercase font-bold py-0 h-4 bg-primary/5 text-primary border-primary/20">
+                                  {response.eventName}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {response.attending ? (
                             <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
@@ -644,4 +801,20 @@ const Guests = () => {
     </div>
   );
 };
+const GuestSkeleton = () => (
+  <div className="space-y-6 animate-pulse">
+    <div className="flex justify-between items-center">
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-4 w-96" />
+      </div>
+      <Skeleton className="h-10 w-32" />
+    </div>
+    <div className="grid gap-4 md:grid-cols-4">
+      {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+    </div>
+    <Skeleton className="h-[500px] w-full rounded-xl" />
+  </div>
+);
+
 export default Guests;

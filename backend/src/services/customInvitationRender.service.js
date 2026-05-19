@@ -11,12 +11,12 @@ function getLocalChromePath() {
     return "/usr/bin/google-chrome";
 }
 
-export async function renderCustomInvitationToImage(invitationId, userId) {
+export async function renderCustomInvitationToImage(invitationId, weddingId) {
     const prisma = getPrisma();
 
-    // 1. Fetch the custom invitation
+    // 1. Fetch the custom invitation using workspace isolation
     const invitation = await prisma.invitation.findFirst({
-        where: { id: invitationId, wedding: { userId } }
+        where: { id: invitationId, weddingId }
     });
 
     if (!invitation || !invitation.isCustom) {

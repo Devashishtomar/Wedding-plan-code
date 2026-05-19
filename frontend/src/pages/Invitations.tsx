@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import { FieldStyles, FieldName } from "@/types/invitation";
 import { CustomInvitationData } from "@/types/customInvitation";
@@ -8,6 +8,8 @@ import { Copy, Check, ExternalLink, Pencil, Sparkles, PaintBucket } from "lucide
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useEvent } from "@/contexts/EventContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import TemplateGallery from "@/components/invitations/TemplateGallery";
 import TemplateEditor from "@/components/invitations/TemplateEditor";
@@ -60,7 +62,12 @@ const Invitations = () => {
   const { toast } = useToast();
   const { setOpen } = useSidebar();
 
+  const { selectedEventId, setSelectedEventId, events, selectedEvent, viewMode } = useEvent();
+  const { canEditCombinedView: canManageInvitations } = usePermissions();
+
   const [copied, setCopied] = useState(false);
+  const [allInvitations, setAllInvitations] = useState<any[]>([]);
+  const [showMasterSummary, setShowMasterSummary] = useState(false);
   const [invitation, setInvitation] = useState<InvitationResponse | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [savedCustomInvitation, setSavedCustomInvitation] = useState<CustomInvitationData | null>(null);
@@ -72,65 +79,108 @@ const Invitations = () => {
     setOpen(false);
   }, [setOpen]);
 
-  // 🟢 1. REUSABLE FETCH FUNCTION
-  const fetchInvitation = async () => {
-    setLoading(true);
+  const loadInvitations = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
-      const res = await api.get("/api/invitations/me");
-
-      if (res.data?.invitation) {
-        setInvitation(res.data);
-
-        // Map custom DB data to your editor state
-        if (res.data.invitation.isCustom) {
-
-          let parsedData: any = { elements: [] };
-          if (typeof res.data.invitation.canvasData === 'string') {
-            try { parsedData = JSON.parse(res.data.invitation.canvasData); } catch (e) { parsedData = { elements: [] }; }
-          } else if (res.data.invitation.canvasData) {
-            parsedData = res.data.invitation.canvasData;
-          }
-
-          // Support legacy array saves AND new object saves
-          const elements = Array.isArray(parsedData) ? parsedData : (parsedData.elements || []);
-          const canvasSize = parsedData.canvasSize || { width: 800, height: 1200 };
-          const backgroundColor = parsedData.backgroundColor || "#ffffff";
-          const border = parsedData.border || undefined;
-
-          setSavedCustomInvitation({
-            id: res.data.invitation.id,
-            name: "My Custom Design",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            elements: elements,
-            canvasSize: canvasSize,
-            backgroundColor: backgroundColor,
-            border: border,
-            backgroundImage: res.data.invitation.customBackground
-              ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${res.data.invitation.customBackground}`
-              : undefined,
-            backgroundOpacity: 1,
-          });
-        }
-        setView("share");
-      } else {
-        setView("gallery");
+      const res = await api.get(`/api/invitations/me?view=${viewMode === 'individual' ? 'PRIVATE' : 'SHARED'}`);
+      if (res.data?.invitations) {
+        setAllInvitations(res.data.invitations);
       }
     } catch (e) {
-      console.error("Failed to load invitation", e);
-      setView("gallery");
+      console.error("Failed to load invitations", e);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInvitation();
-  }, []);
+    loadInvitations(true);
+  }, [viewMode]);
+
+  const prevFetchEventRef = useRef(selectedEventId);
+  useEffect(() => {
+    if (prevFetchEventRef.current !== selectedEventId) {
+      prevFetchEventRef.current = selectedEventId;
+      loadInvitations(true);
+    }
+  }, [selectedEventId]);
+
+  const prevEventIdRef = useRef(selectedEventId);
+
+  useEffect(() => {
+    const targetEventId = selectedEventId === 'all' ? null : selectedEventId;
+    const currentInv = allInvitations.find((inv: any) => inv.invitation.eventId === targetEventId);
+
+    // Check if the user ACTUALLY changed events in the dropdown
+    const isEventChange = prevEventIdRef.current !== selectedEventId;
+    prevEventIdRef.current = selectedEventId;
+
+    // FIXED: Immediately clear stale data on event switch for a snappy UI
+    if (isEventChange) {
+      setInvitation(null);
+      setSavedCustomInvitation(null);
+    }
+
+    if (currentInv) {
+      setInvitation(currentInv);
+
+      // Map custom DB data securely
+      if (currentInv.invitation.isCustom) {
+        let parsedData: any = { elements: [] };
+        if (typeof currentInv.invitation.canvasData === 'string') {
+          try { parsedData = JSON.parse(currentInv.invitation.canvasData); } catch (e) { parsedData = { elements: [] }; }
+        } else if (currentInv.invitation.canvasData) {
+          parsedData = currentInv.invitation.canvasData;
+        }
+
+        const elements = Array.isArray(parsedData) ? parsedData : (parsedData.elements || []);
+        const canvasSize = parsedData.canvasSize || { width: 800, height: 1200 };
+        const backgroundColor = parsedData.backgroundColor || "#ffffff";
+
+        setSavedCustomInvitation({
+          id: currentInv.invitation.id,
+          name: "My Custom Design",
+          createdAt: currentInv.invitation.createdAt || new Date().toISOString(),
+          updatedAt: currentInv.invitation.updatedAt || new Date().toISOString(),
+          elements,
+          canvasSize,
+          backgroundColor,
+          border: parsedData.border,
+          backgroundImage: currentInv.invitation.customBackground
+            ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${currentInv.invitation.customBackground}`
+            : undefined,
+          backgroundOpacity: 1,
+        });
+      }
+
+      // FIXED: If switching to "All Events", ALWAYS route to the Grid
+      if (isEventChange) {
+        if (selectedEventId === 'all') {
+          setView("gallery");
+          setShowMasterSummary(false);
+        } else {
+          setView("share");
+        }
+      } else {
+        setView(prev => prev === "gallery" && selectedEventId !== 'all' ? "share" : prev);
+      }
+    } else {
+      setInvitation(null);
+      setSavedCustomInvitation(null);
+
+      if (isEventChange) {
+        setView("gallery");
+        setShowMasterSummary(false);
+      } else {
+        setView(prev => prev === "share" ? "gallery" : prev);
+      }
+    }
+
+    if (isEventChange) setShowMasterSummary(false); // Reset grid interceptor on event change
+  }, [selectedEventId, allInvitations]);
 
   const handleSelectTemplate = async (templateId: string) => {
     try {
-      // 🟢 FIX: Removed the !isCustom check. If an invite exists, ALWAYS patch it!
       if (invitation?.invitation?.id) {
         const res = await api.patch(
           `/api/invitations/${invitation.invitation.id}`,
@@ -147,9 +197,10 @@ const Invitations = () => {
 
       const res = await api.post("/api/invitations", {
         templateId,
+        eventId: selectedEventId === 'all' ? null : selectedEventId,
       });
 
-      setInvitation(res.data);
+      await loadInvitations();
       setSelectedTemplateId(templateId);
       setView("editor");
     } catch (e) {
@@ -192,8 +243,12 @@ const Invitations = () => {
     setView("gallery");
   };
 
+  const safeEventName = selectedEvent?.name
+    ? selectedEvent.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    : 'all-events';
+
   const invitationLink = invitation
-    ? `${window.location.origin}/rsvp/${invitation.invitation.token}`
+    ? `${window.location.origin}/rsvp/${invitation.invitation.token}?event=${safeEventName}`
     : "";
 
   const handleCopyLink = async () => {
@@ -209,7 +264,7 @@ const Invitations = () => {
   const handleShareWhatsApp = () => {
     if (!invitation) return;
 
-    const link = `${window.location.origin}/rsvp/${invitation.invitation.token}`;
+    const link = invitationLink;
     const names = invitation.invitation.content.names?.trim();
     const date = invitation.invitation.content.date?.trim();
 
@@ -239,18 +294,105 @@ const Invitations = () => {
     return <div>Loading...</div>;
   }
 
+  // FIXED: The "All Events" Grid Law
+  // Intercepts the view if the user is on "All Events" and looking at the gallery
+  if (selectedEventId === 'all' && !showMasterSummary && view === "gallery") {
+    const masterInvite = allInvitations.find((inv: any) => !inv.invitation.eventId);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">All Invitations</h1>
+            <p className="text-muted-foreground">Manage invitations across your entire wedding.</p>
+          </div>
+          {!masterInvite && canManageInvitations && (
+            <Button onClick={() => setShowMasterSummary(true)}>
+              <PaintBucket className="h-4 w-4 mr-2" />
+              Create Master Invitation
+            </Button>
+          )}
+        </div>
+
+        {allInvitations.length === 0 ? (
+          <Card className="flex flex-col items-center justify-center p-12 border-dashed">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <ExternalLink className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">No Invitations Yet</h3>
+            <p className="text-muted-foreground text-center max-w-sm mb-6">
+              Switch to a specific event using the dropdown above, or create a Master Invitation for the entire wedding.
+            </p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {allInvitations
+              .filter((inv: any, index: number, self: any[]) =>
+                index === self.findIndex((t) => t.invitation.eventId === inv.invitation.eventId)
+              )
+              .map((inv: any) => {
+                const evt = events.find((e: any) => e.id === inv.invitation.eventId); const evtName = evt?.name || "All Events (Master)";
+
+                const safeName = evt?.name
+                  ? evt.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                  : 'all-events';
+                const linkUrl = `${window.location.origin}/rsvp/${safeName}/${inv.invitation.token}`;
+
+                return (
+                  <Card
+                    key={inv.invitation.id}
+                    className="group cursor-pointer hover:shadow-md transition-all border-primary/10 hover:border-primary/30 flex flex-col"
+                    onClick={() => {
+                      // FIXED: Teleporter logic!
+                      if (!evt) {
+                        setShowMasterSummary(true);
+                        setView("share");
+                      } else {
+                        setSelectedEventId(evt.id);
+                      }
+                    }}
+                  >
+                    <div className="aspect-[4/3] w-full overflow-hidden bg-muted relative rounded-t-xl border-b">
+                      <img
+                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/invitations/${inv.invitation.id}/render?t=${new Date(inv.invitation.updatedAt || Date.now()).getTime()}`}
+                        alt={evtName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-3 right-3 flex gap-2">
+                        <div className="bg-background/90 text-foreground text-xs font-bold px-2 py-1 rounded backdrop-blur-sm shadow-sm">
+                          {inv.invitation.isCustom ? "Custom" : "Template"}
+                        </div>
+                      </div>
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">{evtName}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="mt-auto">
+                      <p className="text-xs text-muted-foreground truncate mb-4" title={linkUrl}>
+                        {linkUrl}
+                      </p>
+                      <Button variant="secondary" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                        Manage Invitation
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // View 1: Custom Editor
   if (view === "custom-editor") {
     return (
       <CustomEditorPage
         onBack={() => {
           setOpen(true);
-          // 🟢 3. RE-FETCH AFTER SAVE
-          if (invitation) {
-            fetchInvitation();
-          } else {
-            setView("gallery");
-          }
+          loadInvitations();
+          // Actually exit the editor view!
+          setView(selectedEventId === 'all' ? "gallery" : "share");
         }}
         initialData={savedCustomInvitation || undefined}
         onCollapseSidebar={collapseSidebar}
@@ -356,11 +498,23 @@ const Invitations = () => {
   }
 
   // View 4: Share View (after saving standard templates)
+  // View 4: Share View (after saving standard templates)
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Your Invitation</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">
+          {selectedEvent ? `${selectedEvent.name} Invitation` : "Master Invitation"}
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* FIXED: Back to Grid Button */}
+          {selectedEventId === 'all' && showMasterSummary && (
+            <Button variant="outline" onClick={() => {
+              setShowMasterSummary(false);
+              setView("gallery");
+            }}>
+              Back to Grid
+            </Button>
+          )}
           <Button variant="outline" onClick={handleEdit}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit Invitation
@@ -368,7 +522,7 @@ const Invitations = () => {
           <Button variant="outline" onClick={handleChangeTemplate}>
             Change Template
           </Button>
-          <Link to={`/rsvp/${invitation?.invitation.token}`} target="_blank">
+          <Link to={invitationLink} target="_blank">
             <Button variant="outline">
               <ExternalLink className="h-4 w-4 mr-2" />
               Preview RSVP Page

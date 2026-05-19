@@ -1,5 +1,5 @@
 import {
-    getMyInvitation,
+    getInvitations,
     createInvitation,
     updateInvitation,
     getInvitationByToken,
@@ -12,24 +12,31 @@ import {
     COLOR_PALETTE,
 } from '../config/invitationDesign.js';
 import { renderCustomInvitationToImage } from '../services/customInvitationRender.service.js';
-import { getPrisma } from '../loaders/database.js'; // Ensure this is imported
+import { getPrisma } from '../loaders/database.js';
+import { getVisibilityFilter } from '../utils/queryContext.utility.js';
+import { logActivity } from '../utils/activityLogger.utility.js';
 
 
 export const getMyInvite = async (req, res) => {
-    const invitation = await getMyInvitation({
-        userId: req.user.id,
-    });
+    const viewType = req.query.view || 'SHARED';
+    const visibilityFilter = getVisibilityFilter(req, viewType);
+
+    const invitations = await getInvitations({ visibilityFilter });
 
     res.json({
         success: true,
-        ...invitation,
+        invitations,
     });
 };
 
 export const createInvite = async (req, res) => {
-    const { message, templateId, content, styles, globalFontFamily } = req.body;
+    const { message, templateId, content, styles, globalFontFamily, eventId, visibility } = req.body;
 
+    // Securely tie the creation to the workspace, event, and requested view
     const invitation = await createInvitation({
+        weddingId: req.weddingId,
+        eventId: eventId || null,
+        visibility: visibility || 'SHARED',
         userId: req.user.id,
         message,
         templateId,
@@ -38,11 +45,20 @@ export const createInvite = async (req, res) => {
         globalFontFamily,
     });
 
+    await logActivity(
+        req.weddingId,
+        req.user.id,
+        'CREATE',
+        'INVITATION',
+        { invitationId: invitation.id, templateId },
+        eventId || null,
+        visibility || 'SHARED'
+    );
+
     res.status(201).json({
         success: true,
         ...invitation,
     });
-
 };
 
 export const updateInvite = async (req, res) => {
@@ -50,8 +66,11 @@ export const updateInvite = async (req, res) => {
 
     if (templateId && templateId !== "CUSTOM") {
         const prisma = getPrisma();
-        await prisma.invitation.update({
-            where: { id: req.params.id },
+        await prisma.invitation.updateMany({
+            where: {
+                id: req.params.id,
+                weddingId: req.weddingId
+            },
             data: {
                 isCustom: false,
                 canvasData: null,
@@ -61,7 +80,8 @@ export const updateInvite = async (req, res) => {
     }
 
     const invitation = await updateInvitation({
-        userId: req.user.id,
+        weddingId: req.weddingId, // Secure multi-tenant workspace check
+        userId: req.user.id,      // Track who made the update
         invitationId: req.params.id,
         message,
         templateId,
@@ -122,7 +142,7 @@ export const getDesignOptions = async (req, res) => {
 
 export const renderInvitation = async (req, res) => {
     const { id } = req.params;
-    const userId = req.user.id;
+    const weddingId = req.weddingId;
     const isDownload = req.query.download === "1";
 
     try {
@@ -132,9 +152,9 @@ export const renderInvitation = async (req, res) => {
         let imageBuffer;
 
         if (invite && invite.isCustom) {
-            imageBuffer = await renderCustomInvitationToImage(id, userId);
+            imageBuffer = await renderCustomInvitationToImage(id, weddingId);
         } else {
-            imageBuffer = await renderInvitationImage({ invitationId: id, userId });
+            imageBuffer = await renderInvitationImage({ invitationId: id, weddingId });
         }
 
         res.setHeader("Content-Type", "image/png");

@@ -218,4 +218,24 @@
   .shadow-elegant { box-shadow: 0 25px 50px -12px hsl(270 70% 60% / 0.25); }
   .shadow-glow { box-shadow: 0 0 40px hsl(270 70% 60% / 0.3); }
   .shadow-gold { box-shadow: 0 10px 30px -10px hsl(45 95% 65% / 0.4); }
+
+  /* Glassmorphism & AI Assistants */
+  .glass-panel {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+  
+  .glass-morphism {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .ai-gradient-bg {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  }
+
+  .ai-bubble-gradient {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+  }
 }

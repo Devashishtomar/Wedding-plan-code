@@ -1,10 +1,11 @@
 import { AIOrchestratorService } from "../ai/orchestrator/aiOrchestrator.service.js";
+import { getVisibilityFilter } from "../utils/queryContext.utility.js";
 
 /**
  * POST /api/ai/message
  */
 export const handleAIMessage = async (req, res) => {
-    const { message } = req.body;
+    const { message, eventId, view } = req.body;
 
     if (!message || typeof message !== "string") {
         return res.status(400).json({
@@ -15,14 +16,31 @@ export const handleAIMessage = async (req, res) => {
 
     const orchestrator = new AIOrchestratorService();
 
-    const response = await orchestrator.handleMessage({
-        userId: req.user.id,
-        message,
-        appBaseUrl: req.app.locals.appBaseUrl,
-    });
+    try {
+        if (eventId !== undefined) req.query.eventId = eventId;
 
-    res.json({
-        success: true,
-        response,
-    });
+        const visibilityFilter = getVisibilityFilter(req, view || 'SHARED');
+
+        const response = await orchestrator.handleMessage({
+            userId: req.user.id,
+            weddingId: req.weddingId,
+            message,
+            appBaseUrl: req.app.locals.appBaseUrl,
+            visibilityFilter,
+            eventId: eventId || null,
+            view: view || 'SHARED'
+        });
+
+        res.json({
+            success: true,
+            response,
+        });
+    } catch (error) {
+        console.error("AI Assistant Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "AI Assistant encountered an error",
+            error: error.message
+        });
+    }
 };

@@ -10,7 +10,7 @@ import {
 } from "./pendingAction.store.js";
 import { executeAIAction } from "./aiAction.executor.js";
 import { SYSTEM_PROMPT } from "../prompts/system.prompt.js";
-import { callOpenAI } from "../providers/openai.provider.js";
+import { callAI } from "../providers/ai.provider.factory.js";
 import { parseAIResponse } from "./aiResponse.parser.js";
 
 
@@ -22,25 +22,19 @@ export class AIOrchestratorService {
     /**
      * Handle a single user message
      */
-    async handleMessage({ userId, message, appBaseUrl }) {
-        // -----------------------------
+    async handleMessage({ userId, weddingId, message, appBaseUrl, visibilityFilter, eventId, view }) {
         // Step 1: Load pending action (if any)
-        // -----------------------------
         const pendingAction = getPendingAction(userId);
 
-        // -----------------------------
         // Step 2: Detect confirmation state
-        // -----------------------------
         const confirmationResult = detectConfirmation({
             userMessage: message,
             hasPendingAction: Boolean(pendingAction),
         });
 
-        // -----------------------------
         // Step 3: Handle pending action outcomes
-        // -----------------------------
         if (pendingAction) {
-            // ✅ CONFIRM
+            //  CONFIRM
             if (confirmationResult === ConfirmationResult.CONFIRM) {
                 // Clear first to prevent double execution
                 clearPendingAction(userId);
@@ -48,39 +42,50 @@ export class AIOrchestratorService {
                 try {
                     const result = await executeAIAction({
                         userId,
+                        weddingId,
                         action: pendingAction.action,
                         payload: pendingAction.payload,
                         appBaseUrl,
+                        eventId,
+                        view
                     });
 
-                    return {
+                    const response = {
                         type: "MESSAGE",
                         content:
                             "Done! I’ve successfully made that update for you.",
                         result,
                     };
+
+
+                    return response;
                 } catch (error) {
-                    return {
+                    const response = {
                         type: "MESSAGE",
                         content:
-                            " I tried to make that change, but something went wrong. Please try again or do it manually.",
+                            `I tried to make that change, but something went wrong: ${error.message}. Please try again or do it manually.`,
                         error: error.message,
                     };
+
+                    return response;
                 }
             }
 
-            // ❌ DECLINE
+            //  DECLINE
             if (confirmationResult === ConfirmationResult.DECLINE) {
                 clearPendingAction(userId);
 
-                return {
+                const response = {
                     type: "MESSAGE",
                     content:
                         "No problem — I won’t make that change. Let me know if you need help with something else.",
                 };
+
+
+                return response;
             }
 
-            // 🔄 TOPIC SHIFT
+            // TOPIC SHIFT
             if (confirmationResult === ConfirmationResult.TOPIC_SHIFT) {
                 clearPendingAction(userId);
                 // Continue normally below
@@ -92,40 +97,41 @@ export class AIOrchestratorService {
             pendingAction &&
             confirmationResult === ConfirmationResult.IGNORE
         ) {
-            return {
+            const response = {
                 type: "MESSAGE",
                 content:
                     "Please confirm if you’d like me to proceed with the previous suggestion, or let me know if you want to do something else.",
             };
+
+
+            return response;
         }
 
-        // -----------------------------
         // Step 4: Build AI context
-        // -----------------------------
-        const context = await buildAIContext(userId);
+        const context = await buildAIContext({
+            userId,
+            weddingId,
+            visibilityFilter,
+            eventId,
+            view
+        });
 
         // Reflect pending state in context
         context.meta.hasPendingAction = Boolean(
             getPendingAction(userId)
         );
 
-        // -----------------------------
-        // Step 5: Call OpenAI
-        // -----------------------------
-        const rawAIResponse = await callOpenAI({
+        // Step 5: Call Gemini
+        const rawAIResponse = await callAI({
             systemPrompt: SYSTEM_PROMPT,
             context,
             userMessage: message,
         });
 
-        // -----------------------------
         // Step 6: Parse AI response safely
-        // -----------------------------
         const aiResponse = parseAIResponse(rawAIResponse);
 
-        // -----------------------------
         // Step 7: Handle AI proposal
-        // -----------------------------
         if (aiResponse.type === "PROPOSE_ACTION") {
             const pending = setPendingAction({
                 userId,
@@ -143,9 +149,7 @@ export class AIOrchestratorService {
             };
         }
 
-        // -----------------------------
         // Step 8: Return AI message
-        // -----------------------------
         return aiResponse;
     }
 

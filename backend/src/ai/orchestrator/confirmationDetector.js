@@ -33,8 +33,13 @@ const CONFIRM_PHRASES = [
     "confirm",
     "proceed",
     "yes",
-    "proceed",
     "update it",
+    "sure",
+    "alright",
+    "sounds good",
+    "make it happen",
+    "do that",
+    "ok do it",
 ];
 
 /**
@@ -50,6 +55,9 @@ const DECLINE_PHRASES = [
     "maybe later",
     "ill do it myself",
     "cancel",
+    "don't do it",
+    "stop",
+    "nevermind",
 ];
 
 /**
@@ -62,8 +70,6 @@ const AMBIGUOUS_ACKS = [
     "okay",
     "hmm",
     "maybe",
-    "sure",
-    "alright",
 ];
 
 /**
@@ -84,24 +90,17 @@ export const detectConfirmation = ({
 
     const text = normalize(userMessage);
 
-    // -----------------------------
     // Explicit DECLINE
-    // -----------------------------
     if (DECLINE_PHRASES.some((p) => text === p || text.startsWith(p))) {
         return ConfirmationResult.DECLINE;
     }
 
-    // -----------------------------
     // Explicit CONFIRM
-    // -----------------------------
     if (CONFIRM_PHRASES.some((p) => text === p || text.includes(p))) {
         return ConfirmationResult.CONFIRM;
     }
 
-    // -----------------------------
     // Ambiguous acknowledgements
-    // (never confirmation)
-    // -----------------------------
     if (AMBIGUOUS_ACKS.includes(text)) {
         return ConfirmationResult.IGNORE;
     }

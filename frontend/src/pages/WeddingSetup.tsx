@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import SEOHead from "@/components/SEOHead";
 import { useToast } from "@/hooks/use-toast";
+import SuggestionView from "@/components/wedding/SuggestionView";
 
 interface WeddingSetupProps {
   isEditing?: boolean;
@@ -35,12 +36,16 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<"form" | "suggestion">("form");
+  const [suggestion, setSuggestion] = useState<any>(null);
+
   const [errors, setErrors] = useState<{
     date?: string;
     location?: string;
     budget?: string;
     guestCount?: string;
     weddingType?: string;
+    role?: string;
   }>({});
 
 
@@ -64,6 +69,8 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
     initialData?.weddingType || ""
   );
 
+  const [role, setRole] = useState<string>("");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -83,6 +90,9 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
     if (!weddingType)
       newErrors.weddingType = "Please select a wedding type";
 
+    if (!role)
+      newErrors.role = "Please select your role";
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -91,14 +101,6 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
     setErrors({});
     setLoading(true);
 
-    const weddingDetails = {
-      weddingDate: weddingDate.toISOString(),
-      location,
-      budget,
-      guestCount,
-      weddingType,
-    };
-
     try {
       await api.patch("/api/weddings/setup", {
         date: weddingDate.toISOString(),
@@ -106,32 +108,56 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
         budget: Number(budget),
         guestCount: Number(guestCount),
         weddingType,
+        role,
       });
 
-      toast({
-        title: isEditing ? "Wedding details updated!" : "Wedding created!",
-        description: isEditing
-          ? "Your wedding details have been saved."
-          : "Let's start planning your perfect wedding.",
-      });
-
-      if (isEditing && onClose) {
-        onClose();
+      if (isEditing) {
+        toast({ title: "Wedding details updated!" });
+        if (onClose) onClose();
       } else {
-        navigate("/dashboard");
+        // Fetch suggestion after setup
+        const res = await api.get("/api/weddings/suggestion");
+        setSuggestion(res.data.suggestion);
+        setStep("suggestion");
       }
     } catch (error: any) {
       toast({
         title: "Something went wrong",
-        description:
-          error?.response?.data?.message ||
-          "Unable to save wedding details. Please try again.",
+        description: error?.response?.data?.message || "Unable to save wedding details.",
         variant: "destructive",
       });
     }
     finally {
       setLoading(false);
     }
+  };
+
+  const handleAcceptSuggestion = async (modifiedSuggestion?: any) => {
+    setLoading(true);
+    const suggestionToSave = modifiedSuggestion || suggestion;
+    try {
+      await api.post("/api/weddings/accept-suggestion", { suggestion: suggestionToSave });
+      localStorage.setItem("demo_live_mode", "true");
+      toast({
+        title: "Plan accepted!",
+        description: "Your checklist and budget have been populated.",
+      });
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Failed to save plan",
+        description: "Your details were saved, but we couldn't create the checklist. You can add tasks manually.",
+        variant: "destructive",
+      });
+      navigate("/dashboard");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSkipSuggestion = () => {
+    localStorage.setItem("demo_live_mode", "true");
+    navigate("/dashboard");
   };
 
   const weddingTypes = [
@@ -144,6 +170,19 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
     { value: "religious", label: "Religious" },
     { value: "cultural", label: "Cultural" },
   ];
+
+  if (step === "suggestion") {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
+        <SuggestionView
+          suggestion={suggestion}
+          onAccept={handleAcceptSuggestion}
+          onSkip={handleSkipSuggestion}
+          loading={loading}
+        />
+      </main>
+    );
+  }
 
   const content = (
     <Card className={cn("w-full", isEditing ? "border-0 shadow-none" : "max-w-lg")}>
@@ -262,6 +301,28 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>I am the...</Label>
+            <Select
+              value={role}
+              onValueChange={(value) => {
+                setRole(value);
+                setErrors((prev) => ({ ...prev, role: undefined }));
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select your role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BRIDE">Bride</SelectItem>
+                <SelectItem value="GROOM">Groom</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.role && (
+              <p className="text-sm text-destructive">{errors.role}</p>
+            )}
+          </div>
+
           {/* Wedding Type */}
           <div className="space-y-2">
             <Label>Wedding Type</Label>
@@ -303,7 +364,8 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
                 !location ||
                 !budget ||
                 !guestCount ||
-                !weddingType
+                !weddingType ||
+                !role
               }
             >
               {loading

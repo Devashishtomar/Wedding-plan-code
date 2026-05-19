@@ -3,9 +3,26 @@ import { AIActionType } from "../contracts/actions.enum.js";
 export const parseAIResponse = (raw) => {
     let parsed;
 
+    // Clean up markdown block if present
+    let cleanRaw = raw.trim();
+    if (cleanRaw.startsWith("```json")) {
+        cleanRaw = cleanRaw.substring(7);
+        if (cleanRaw.endsWith("```")) {
+            cleanRaw = cleanRaw.slice(0, -3);
+        }
+    } else if (cleanRaw.startsWith("```")) {
+        cleanRaw = cleanRaw.substring(3);
+        if (cleanRaw.endsWith("```")) {
+            cleanRaw = cleanRaw.slice(0, -3);
+        }
+    }
+
+    cleanRaw = cleanRaw.trim();
+
     try {
-        parsed = JSON.parse(raw);
-    } catch {
+        parsed = JSON.parse(cleanRaw);
+    } catch (e) {
+        console.error("Failed to parse AI response:", raw, e);
         return {
             type: "MESSAGE",
             content:

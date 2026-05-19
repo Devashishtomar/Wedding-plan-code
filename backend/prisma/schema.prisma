@@ -3,11 +3,54 @@ generator client {
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
+enum Role {
+  PENDING // Default before they select Bride/Groom in setup
+  BRIDE
+  GROOM
+  FAMILY
+  OTHER
+}
+
+enum Visibility {
+  BRIDE_PRIVATE
+  GROOM_PRIVATE
+  SHARED
+}
+
+model WeddingMember {
+  id        String @id @default(uuid())
+  userId    String
+  weddingId String
+  role      Role   @default(PENDING)
+
+  side Role?
+
+  privateTargetBudget Float?
+  privateTargetDate   DateTime?
+
+  canEditCombinedView Boolean @default(false)
+  canEditGuests       Boolean @default(false)
+  canManageBudget     Boolean @default(false)
+  canManageEvents     Boolean @default(false)
+
+  canViewPrivate Boolean @default(false)
+  canEditPrivate Boolean @default(false) // Add/Edit only, no delete
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wedding Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weddingId])
+  @@index([userId])
+  @@index([weddingId])
+}
 
 model User {
   id        String   @id @default(uuid())
@@ -16,122 +59,230 @@ model User {
   password  String
   createdAt DateTime @default(now())
 
-  weddings  Wedding[]
-  invitations Invitation[]
+  weddingMembers WeddingMember[]
+  activityLogs   ActivityLog[]
+
+  createdEvents      Event[]         @relation("EventCreatedBy")
+  createdInvitations Invitation[]    @relation("InvitationCreatedBy")
+  updatedInvitations Invitation[]    @relation("InvitationUpdatedBy")
+  createdGuests      Guest[]         @relation("GuestCreatedBy")
+  updatedGuests      Guest[]         @relation("GuestUpdatedBy")
+  createdBudgetItems BudgetItem[]    @relation("BudgetCreatedBy")
+  updatedBudgetItems BudgetItem[]    @relation("BudgetUpdatedBy")
+  createdTasks       ChecklistTask[] @relation("TaskCreatedBy")
+  updatedTasks       ChecklistTask[] @relation("TaskUpdatedBy")
 }
 
 model Wedding {
-  id          String   @id @default(uuid())
-  userId      String
-  date        DateTime?
-  location    String?
-  budget      Int      @default(0)
-  guestCount  Int      @default(0)
-  weddingType String?
-  createdAt   DateTime @default(now())
-  updatedAt DateTime? @updatedAt
-  setupCompleted Boolean  @default(false)
+  id                  String    @id @default(uuid())
+  date                DateTime?
+  location            String?
+  budget              Int       @default(0)
+  guestCount          Int       @default(0)
+  weddingType         String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime? @updatedAt
+  setupCompleted      Boolean   @default(false)
+  suggestedVenueName  String?
+  suggestedVendorNote String?
 
-  user         User         @relation(fields: [userId], references: [id])
-  guests       Guest[]
-  budgetItems  BudgetItem[]
-  invitations  Invitation[]
-  checklistTasks ChecklistTask[]   
-  @@index([userId])
+  members        WeddingMember[]
+  events         Event[]
+  guests         Guest[]
+  budgetItems    BudgetItem[]
+  invitations    Invitation[]
+  checklistTasks ChecklistTask[]
+  activityLogs   ActivityLog[]
 }
 
 model Guest {
-  id        String   @id @default(uuid())
-  weddingId String
+  id          String     @id @default(uuid())
+  weddingId   String
+  eventId     String?
+  createdById String
+  updatedById String?
+  visibility  Visibility @default(SHARED)
+
   name      String
   email     String?
   rsvp      String   @default("PENDING")
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  wedding Wedding @relation(fields: [weddingId], references: [id])
-  invites      GuestInvite[] 
+  wedding   Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  event     Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy User          @relation("GuestCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?         @relation("GuestUpdatedBy", fields: [updatedById], references: [id])
+  invites   GuestInvite[]
+
+  @@unique([email, eventId])
   @@index([weddingId])
+  @@index([eventId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model BudgetItem {
-  id         String   @id @default(uuid())
-  weddingId  String
-  category   String
-  estimated  Int
-  actual     Int      @default(0)
-  createdAt  DateTime @default(now())
+  id          String     @id @default(uuid())
+  weddingId   String
+  eventId     String?
+  createdById String
+  updatedById String?
+  visibility  Visibility @default(SHARED)
 
-  wedding Wedding @relation(fields: [weddingId], references: [id])
+  category  String
+  estimated Int
+  actual    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wedding   Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  event     Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("BudgetCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?   @relation("BudgetUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([weddingId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model Invitation {
-  id               String   @id @default(uuid())
-  weddingId        String   @unique
-  userId           String
+  id          String     @id @default(uuid())
+  weddingId   String
+  eventId     String?
+  createdById String
+  updatedById String?
+  visibility  Visibility @default(SHARED)
 
-  message          String
-  token            String   @unique
+  message String
+  token   String @unique
 
-  templateId       String
+  templateId String
 
-  title            String?
-  names            String?
-  date             String?
-  time             String?
-  venue            String?
-  rsvpDate         String?
+  title    String?
+  names    String?
+  date     String?
+  time     String?
+  venue    String?
+  rsvpDate String?
 
   globalFontFamily String?
-  styles            Json?
+  styles           Json?
 
-  isCustom         Boolean  @default(false)
-  canvasData       Json?    
-  customBackground String?  
+  isCustom         Boolean @default(false)
+  canvasData       Json?
+  customBackground String?
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  wedding          Wedding        @relation(fields: [weddingId], references: [id])
-  user             User           @relation(fields: [userId], references: [id])
-  guestInvites     GuestInvite[]
+  wedding      Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  event        Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy    User          @relation("InvitationCreatedBy", fields: [createdById], references: [id])
+  updatedBy    User?         @relation("InvitationUpdatedBy", fields: [updatedById], references: [id])
+  guestInvites GuestInvite[]
+
+  @@unique([weddingId, eventId, visibility])
+  @@index([weddingId])
+  @@index([eventId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
-
 model ChecklistTask {
-  id         String   @id @default(uuid())
-  weddingId  String
-  title      String
-  category   String
-  priority   String   @default("MEDIUM")
-  dueDate    DateTime?
-  completed  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id          String     @id @default(uuid())
+  weddingId   String
+  eventId     String?
+  createdById String
+  updatedById String?
+  visibility  Visibility @default(SHARED)
 
-  wedding   Wedding          @relation(fields: [weddingId], references: [id])
+  title     String
+  category  String
+  priority  String    @default("MEDIUM")
+  dueDate   DateTime?
+  completed Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  wedding   Wedding            @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  event     Event?             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy User               @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?              @relation("TaskUpdatedBy", fields: [updatedById], references: [id])
   subtasks  ChecklistSubTask[]
+
+  @@index([weddingId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model ChecklistSubTask {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   taskId    String
   title     String
   completed Boolean @default(false)
 
-  task ChecklistTask @relation(fields: [taskId], references: [id])
+  task ChecklistTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model GuestInvite {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   guestId      String
   invitationId String
-  token        String   @unique
-  status       String   @default("CREATED")
+  token        String    @unique
+  status       String    @default("CREATED")
   sentAt       DateTime?
   respondedAt  DateTime?
 
-  guest        Guest      @relation(fields: [guestId], references: [id])
-  invitation   Invitation @relation(fields: [invitationId], references: [id])
+  guest      Guest      @relation(fields: [guestId], references: [id])
+  invitation Invitation @relation(fields: [invitationId], references: [id])
+
   @@index([guestId])
   @@index([invitationId])
 }
 
+model ActivityLog {
+  id         String     @id @default(uuid())
+  weddingId  String
+  userId     String
+  eventId    String? // FIXED: Required for Event Isolation
+  visibility Visibility @default(SHARED) // FIXED: Required for View Isolation
+  action     String
+  entity     String
+  details    String?
+  createdAt  DateTime   @default(now())
+
+  wedding Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event   Event?  @relation(fields: [eventId], references: [id]) // FIXED: Relation link
+
+  @@index([weddingId])
+  @@index([userId])
+  @@index([eventId]) // FIXED: Index for performance
+}
+
+model Event {
+  id          String     @id @default(uuid())
+  weddingId   String
+  createdById String
+  visibility  Visibility @default(SHARED)
+
+  name     String
+  date     DateTime?
+  location String?
+  budget   Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wedding   Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("EventCreatedBy", fields: [createdById], references: [id])
+
+  guests       Guest[]
+  budgetItems  BudgetItem[]
+  tasks        ChecklistTask[]
+  invitations  Invitation[]
+  activityLogs ActivityLog[]
+
+  @@index([weddingId])
+}

@@ -1,31 +1,25 @@
 import { AIActionType } from "../contracts/actions.enum.js";
-
-// Budget
 import {
     addBudgetItem,
     updateBudgetItem,
+    deleteBudgetItem,
 } from "../../services/budget.service.js";
-
-// Checklist
 import {
     createTask,
     updateTask,
     toggleTask,
+    deleteTask,
     addSubTask,
+    updateSubTask,
     toggleSubTask,
+    deleteSubTask,
 } from "../../services/checklist.service.js";
-
-// Guests
-import { createGuest } from "../../services/guest.service.js";
-import { sendTrackedInvite } from "../../services/guestInvite.service.js";
-
-// Invitation
+import { createGuest, createGuestsBulk, updateGuest, deleteGuest } from "../../services/guest.service.js";
+import { sendTrackedInvite, sendBulkInvites } from "../../services/guestInvite.service.js";
 import {
     createInvitation,
     updateInvitation,
 } from "../../services/invitation.service.js";
-
-// Wedding
 import { getPrisma } from "../../loaders/database.js";
 
 /**
@@ -39,29 +33,22 @@ import { getPrisma } from "../../loaders/database.js";
  */
 export const executeAIAction = async ({
     userId,
+    weddingId,
     action,
     payload,
     appBaseUrl,
+    eventId,
+    view
 }) => {
+    const targetEventId = eventId === 'all' ? null : (eventId || null);
     switch (action) {
-        // =========================
         // BUDGET
-        // =========================
         case AIActionType.ADD_BUDGET_ITEM: {
-            const prisma = getPrisma();
-
-            const wedding = await prisma.wedding.findFirst({
-                where: { userId },
-                select: { id: true },
-            });
-
-            if (!wedding) {
-                throw new Error("Wedding not found");
-            }
-
             return addBudgetItem({
                 userId,
-                weddingId: wedding.id,
+                weddingId,
+                eventId: targetEventId,
+                visibility: view || 'SHARED',
                 data: {
                     category: payload.category,
                     estimated: payload.estimated,
@@ -71,31 +58,26 @@ export const executeAIAction = async ({
         }
 
         case AIActionType.UPDATE_BUDGET_ITEM: {
+            const { itemId, data, ...rest } = payload;
             return updateBudgetItem({
                 userId,
-                itemId: payload.itemId,
-                data: payload.data,
+                weddingId,
+                itemId: itemId,
+                data: data || rest,
             });
         }
 
-        // =========================
+        case AIActionType.DELETE_BUDGET_ITEM: {
+            throw new Error("Action Forbidden: AI is not allowed to delete items.");
+        }
+
         // CHECKLIST
-        // =========================
         case AIActionType.CREATE_TASK: {
-            const prisma = getPrisma();
-
-            const wedding = await prisma.wedding.findFirst({
-                where: { userId },
-                select: { id: true },
-            });
-
-            if (!wedding) {
-                throw new Error("Wedding not found");
-            }
-
             return createTask({
                 userId,
-                weddingId: wedding.id,
+                weddingId,
+                eventId: targetEventId,
+                visibility: view || 'SHARED',
                 data: {
                     title: payload.title,
                     category: payload.category || "General",
@@ -106,16 +88,19 @@ export const executeAIAction = async ({
         }
 
         case AIActionType.UPDATE_TASK: {
+            const { taskId, data, ...rest } = payload;
             return updateTask({
                 userId,
-                taskId: payload.taskId,
-                data: payload.data,
+                weddingId,
+                taskId: taskId,
+                data: data || rest,
             });
         }
 
         case AIActionType.TOGGLE_TASK: {
             return toggleTask({
                 userId,
+                weddingId,
                 taskId: payload.taskId,
             });
         }
@@ -123,6 +108,7 @@ export const executeAIAction = async ({
         case AIActionType.CREATE_SUBTASK: {
             return addSubTask({
                 userId,
+                weddingId,
                 taskId: payload.taskId,
                 title: payload.title,
             });
@@ -131,35 +117,87 @@ export const executeAIAction = async ({
         case AIActionType.TOGGLE_SUBTASK: {
             return toggleSubTask({
                 userId,
+                weddingId,
                 subtaskId: payload.subtaskId,
             });
         }
 
-        // =========================
+        case AIActionType.UPDATE_SUBTASK: {
+            const { subtaskId, ...data } = payload;
+            return updateSubTask({
+                userId,
+                weddingId,
+                subtaskId,
+                ...data,
+            });
+        }
+
+        case AIActionType.DELETE_TASK:
+        case AIActionType.DELETE_SUBTASK: {
+            throw new Error("Action Forbidden: AI is not allowed to delete tasks.");
+        }
+
         // GUESTS
-        // =========================
         case AIActionType.CREATE_GUEST: {
             return createGuest({
                 userId,
+                weddingId,
+                eventId: targetEventId,
+                visibility: view || 'SHARED',
                 name: payload.name,
                 email: payload.email || null,
             });
         }
 
+        case AIActionType.CREATE_GUESTS_BULK: {
+            return createGuestsBulk({
+                userId,
+                weddingId,
+                eventId: targetEventId,
+                visibility: view || 'SHARED',
+                guests: payload.guests,
+            });
+        }
+
+        case AIActionType.UPDATE_GUEST: {
+            const { guestId, ...data } = payload;
+            return updateGuest({
+                userId,
+                weddingId,
+                guestId,
+                ...data,
+            });
+        }
+
+        case AIActionType.DELETE_GUEST: {
+            throw new Error("Action Forbidden: AI is not allowed to delete guests.");
+        }
+
         case AIActionType.SEND_GUEST_INVITE: {
             return sendTrackedInvite({
                 userId,
+                weddingId,
                 guestId: payload.guestId,
                 appBaseUrl,
             });
         }
 
-        // =========================
+        case AIActionType.SEND_BULK_INVITES: {
+            return sendBulkInvites({
+                userId,
+                weddingId,
+                guestIds: payload.guestIds,
+                appBaseUrl,
+            });
+        }
+
         // INVITATION
-        // =========================
         case AIActionType.CREATE_INVITATION: {
             return createInvitation({
                 userId,
+                weddingId,
+                eventId: targetEventId,
+                visibility: view || 'SHARED',
                 message: payload.message,
             });
         }
@@ -167,14 +205,13 @@ export const executeAIAction = async ({
         case AIActionType.UPDATE_INVITATION: {
             return updateInvitation({
                 userId,
+                weddingId,
                 invitationId: payload.invitationId,
                 message: payload.message,
             });
         }
 
-        // =========================
         // WEDDING
-        // =========================
         case AIActionType.UPDATE_WEDDING_DETAILS: {
             const prisma = getPrisma();
 
@@ -204,9 +241,7 @@ export const executeAIAction = async ({
             });
         }
 
-        // =========================
         // SAFETY FALLBACK
-        // =========================
         default:
             throw new Error(`Unsupported AI action: ${action}`);
     }

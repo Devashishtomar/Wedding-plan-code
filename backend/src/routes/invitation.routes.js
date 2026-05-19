@@ -14,6 +14,7 @@ import { requireAuth } from '../middlewares/auth.middleware.js';
 import { requireWeddingSetup } from "../middlewares/onboarding.middleware.js";
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { saveCustomInvitation } from '../controllers/customInvitation.controller.js';
+import { requirePermission } from '../middlewares/rbac.middleware.js';
 import { uploadLocal } from '../middlewares/upload.middleware.js';
 
 const router = express.Router();
@@ -25,13 +26,12 @@ const publicInviteLimiter = rateLimit({
 
 // Authenticated
 router.get('/me', requireAuth, requireWeddingSetup, asyncHandler(getMyInvite));
-router.post('/', requireAuth, requireWeddingSetup, asyncHandler(createInvite));
-router.patch('/:id', requireAuth, requireWeddingSetup, asyncHandler(updateInvite));
+router.post('/', requireAuth, requireWeddingSetup, requirePermission('canEditCombinedView'), asyncHandler(createInvite));
+router.patch('/:id', requireAuth, requireWeddingSetup, requirePermission('canEditCombinedView'), asyncHandler(updateInvite));
 router.get('/templates', requireAuth, requireWeddingSetup, asyncHandler(listTemplates));
 router.get('/templates/:id', requireAuth, requireWeddingSetup, asyncHandler(getTemplate));
 router.get('/design-options', requireAuth, requireWeddingSetup, asyncHandler(getDesignOptions));
 router.get('/:id/render', requireAuth, requireWeddingSetup, asyncHandler(renderInvitation));
-router.post('/custom', requireAuth, requireWeddingSetup, uploadLocal.single('background'), asyncHandler(saveCustomInvitation));
-
+router.post('/custom', requireAuth, requireWeddingSetup, requirePermission('canEditCombinedView'), uploadLocal.single('background'), asyncHandler(saveCustomInvitation));
 
 export default router;

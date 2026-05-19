@@ -10,15 +10,15 @@ initLogger();
 await connectDB();
 
 const server = app.listen(PORT, () => {
-    logger.info(`🚀 Server running on port ${PORT}`);
+    logger.info(`Server running on port ${PORT}`);
 });
 
 const shutdown = async () => {
-    logger.info('🛑 Shutting down server...');
+    logger.info('Shutting down server...');
     server.close(async () => {
         const prisma = getPrisma();
         await prisma.$disconnect();
-        logger.info('✅ Database disconnected');
+        logger.info('Database disconnected');
         process.exit(0);
     });
 };

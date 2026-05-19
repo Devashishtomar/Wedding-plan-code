@@ -1,97 +1,42 @@
 import { getPrisma } from '../loaders/database.js';
 
-
-/**
- * Verify wedding ownership
- */
-const verifyWedding = async (userId, weddingId) => {
+export const getTasks = async ({ visibilityFilter }) => {
     const prisma = getPrisma();
-    const wedding = await prisma.wedding.findFirst({
-        where: { id: weddingId, userId },
+
+    return prisma.checklistTask.findMany({
+        where: visibilityFilter,
+        include: { subtasks: true, event: { select: { name: true } } },
+        orderBy: { createdAt: 'asc' },
     });
-
-    if (!wedding) {
-        const err = new Error('Wedding not found');
-        err.statusCode = 404;
-        throw err;
-    }
-
-    return wedding;
 };
 
-export const createTask = async ({ userId, weddingId, data }) => {
+export const createTask = async ({ userId, weddingId, eventId, data }) => { // FIXED: Added eventId parameter
     const prisma = getPrisma();
-    await verifyWedding(userId, weddingId);
 
     return prisma.checklistTask.create({
         data: {
             weddingId,
+            eventId: eventId || null,
+            createdById: userId,
+            visibility: data.visibility || 'SHARED',
             title: data.title,
             category: data.category,
             priority: data.priority || 'MEDIUM',
             dueDate: data.dueDate ? new Date(data.dueDate) : null,
         },
+        include: { subtasks: true }
     });
 };
 
-export const getTasks = async ({ userId, weddingId }) => {
-    const prisma = getPrisma();
-    await verifyWedding(userId, weddingId);
-
-    return prisma.checklistTask.findMany({
-        where: { weddingId },
-        include: { subtasks: true },
-        orderBy: { createdAt: 'asc' },
-    });
-};
-
-export const toggleTask = async ({ userId, taskId }) => {
-    const prisma = getPrisma();
-    const task = await prisma.checklistTask.findUnique({
-        where: { id: taskId },
-        include: { wedding: true },
-    });
-
-    if (!task || task.wedding.userId !== userId) {
-        const err = new Error('Task not found');
-        err.statusCode = 404;
-        throw err;
-    }
-
-    return prisma.checklistTask.update({
-        where: { id: taskId },
-        data: { completed: !task.completed },
-    });
-};
-
-export const addSubTask = async ({ userId, taskId, title }) => {
-    const prisma = getPrisma();
-    const task = await prisma.checklistTask.findUnique({
-        where: { id: taskId },
-        include: { wedding: true },
-    });
-
-    if (!task || task.wedding.userId !== userId) {
-        const err = new Error('Task not found');
-        err.statusCode = 404;
-        throw err;
-    }
-
-    return prisma.checklistSubTask.create({
-        data: { taskId, title },
-    });
-};
-
-export const updateTask = async ({ userId, taskId, data }) => {
+export const updateTask = async ({ userId, weddingId, taskId, data }) => {
     const prisma = getPrisma();
 
-    const task = await prisma.checklistTask.findUnique({
-        where: { id: taskId },
-        include: { wedding: true },
+    const task = await prisma.checklistTask.findFirst({
+        where: { id: taskId, weddingId },
     });
 
-    if (!task || task.wedding.userId !== userId) {
-        const err = new Error('Task not found');
+    if (!task) {
+        const err = new Error('Task not found in this workspace');
         err.statusCode = 404;
         throw err;
     }
@@ -99,22 +44,73 @@ export const updateTask = async ({ userId, taskId, data }) => {
     return prisma.checklistTask.update({
         where: { id: taskId },
         data: {
-            dueDate: data.dueDate ? new Date(data.dueDate) : null,
-            priority: data.priority,
+            title: data.title !== undefined ? data.title : undefined,
+            category: data.category !== undefined ? data.category : undefined,
+            dueDate: data.dueDate !== undefined ? (data.dueDate ? new Date(data.dueDate) : null) : undefined,
+            priority: data.priority !== undefined ? data.priority : undefined,
+            eventId: data.eventId !== undefined ? data.eventId : undefined,
+            visibility: data.visibility !== undefined ? data.visibility : undefined,
+            updatedById: userId, // Track row-level updates
+        },
+        include: { subtasks: true }
+    });
+};
+
+export const toggleTask = async ({ userId, weddingId, taskId }) => {
+    const prisma = getPrisma();
+
+    const task = await prisma.checklistTask.findFirst({
+        where: { id: taskId, weddingId },
+    });
+
+    if (!task) {
+        const err = new Error('Task not found in this workspace');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    return prisma.checklistTask.update({
+        where: { id: taskId },
+        data: {
+            completed: !task.completed,
+            updatedById: userId
+        },
+        include: { subtasks: true }
+    });
+};
+
+export const addSubTask = async ({ weddingId, taskId, title }) => {
+    const prisma = getPrisma();
+
+    // Verify the parent task belongs to this workspace
+    const task = await prisma.checklistTask.findFirst({
+        where: { id: taskId, weddingId },
+    });
+
+    if (!task) {
+        const err = new Error('Parent task not found in this workspace');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    return prisma.checklistSubTask.create({
+        data: {
+            taskId,
+            title,
         },
     });
 };
 
-export const toggleSubTask = async ({ userId, subtaskId }) => {
+export const toggleSubTask = async ({ weddingId, subtaskId }) => {
     const prisma = getPrisma();
 
     const subtask = await prisma.checklistSubTask.findUnique({
         where: { id: subtaskId },
-        include: { task: { include: { wedding: true } } },
+        include: { task: true },
     });
 
-    if (!subtask || subtask.task.wedding.userId !== userId) {
-        const err = new Error('Subtask not found');
+    if (!subtask || subtask.task.weddingId !== weddingId) {
+        const err = new Error('Subtask not found in this workspace');
         err.statusCode = 404;
         throw err;
     }
@@ -125,22 +121,63 @@ export const toggleSubTask = async ({ userId, subtaskId }) => {
     });
 };
 
-export const deleteSubTask = async ({ userId, subtaskId }) => {
+export const deleteSubTask = async ({ weddingId, subtaskId }) => {
     const prisma = getPrisma();
 
     const subtask = await prisma.checklistSubTask.findUnique({
         where: { id: subtaskId },
-        include: { task: { include: { wedding: true } } },
+        include: { task: true },
     });
 
-    if (!subtask || subtask.task.wedding.userId !== userId) {
-        const err = new Error('Subtask not found');
+    if (!subtask || subtask.task.weddingId !== weddingId) {
+        const err = new Error('Subtask not found in this workspace');
         err.statusCode = 404;
         throw err;
     }
 
-    await prisma.checklistSubTask.delete({
+    return prisma.checklistSubTask.delete({
         where: { id: subtaskId },
     });
 };
 
+export const deleteTask = async ({ weddingId, taskId }) => {
+    const prisma = getPrisma();
+
+    const task = await prisma.checklistTask.findFirst({
+        where: { id: taskId, weddingId },
+    });
+
+    if (!task) {
+        const err = new Error('Task not found in this workspace');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    return prisma.checklistTask.delete({
+        where: { id: taskId },
+    });
+};
+
+
+export const updateSubTask = async ({ weddingId, subtaskId, title, completed }) => {
+    const prisma = getPrisma();
+
+    const subtask = await prisma.checklistSubTask.findUnique({
+        where: { id: subtaskId },
+        include: { task: true },
+    });
+
+    if (!subtask || subtask.task.weddingId !== weddingId) {
+        const err = new Error('Subtask not found in this workspace');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    return prisma.checklistSubTask.update({
+        where: { id: subtaskId },
+        data: {
+            title: title !== undefined ? title : undefined,
+            completed: completed !== undefined ? completed : undefined,
+        },
+    });
+};

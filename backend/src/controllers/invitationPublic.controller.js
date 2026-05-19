@@ -8,7 +8,9 @@ export const renderPublicInvitationImage = async (req, res) => {
 
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
 
         return res.send(buffer);
     } catch (err) {

@@ -9,16 +9,20 @@ const required = [
   'DIRECT_URL',
   'JWT_SECRET',
   'FRONTEND_URL',
+  'APP_BASE_URL',
   'EMAIL_HOST',
   'EMAIL_USER',
   'EMAIL_PASS',
+  'EMAIL_FROM',
 ];
 
 required.push("OPENAI_API_KEY");
+required.push("GROQ_API_KEYS");
+required.push("GEMINI_API_KEYS");
 
 required.forEach((key) => {
   if (!process.env[key]) {
-    console.error(`❌ Missing required env var: ${key}`);
+    console.error(` Missing required env var: ${key}`);
     process.exit(1);
   }
 });
@@ -31,7 +35,7 @@ export const env = {
   directUrl: process.env.DIRECT_URL,
 
   jwtSecret: process.env.JWT_SECRET,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
 
   frontendUrl: process.env.FRONTEND_URL,
   appBaseUrl: process.env.APP_BASE_URL,
@@ -43,4 +47,12 @@ export const env = {
   emailFrom: process.env.EMAIL_FROM,
 
   authMode: process.env.AUTH_MODE,
+
+  groqApiKeys: process.env.GROQ_API_KEYS
+    ? process.env.GROQ_API_KEYS.split(",")
+    : [],
+
+  geminiApiKeys: process.env.GEMINI_API_KEYS
+    ? process.env.GEMINI_API_KEYS.split(",")
+    : [],
 };

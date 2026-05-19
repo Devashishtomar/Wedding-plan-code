@@ -1,27 +1,45 @@
 import { getPrisma } from '../loaders/database.js';
 import crypto from 'crypto';
+import { logActivity } from '../utils/activityLogger.utility.js';
 
 const generateToken = () => crypto.randomBytes(32).toString('hex');
 
 export const saveCustomInvitation = async (req, res) => {
     const prisma = getPrisma();
     const userId = req.user.id;
-    const { canvasData } = req.body; // The JSON array from the frontend
+    const weddingId = req.weddingId; // Securely injected by middleware
+    const { canvasData, eventId, visibility, invitationId } = req.body;
 
     try {
-        // 1. Get User's Wedding
-        const wedding = await prisma.wedding.findFirst({ where: { userId } });
-        if (!wedding) return res.status(404).json({ success: false, message: "Wedding not found" });
+        if (!weddingId) return res.status(404).json({ success: false, message: "No active workspace" });
 
-        // 2. Handle Background Upload (if they uploaded a file)
+        // 1. Handle Background Upload (if they uploaded a file)
         let customBackground = null;
         if (req.file) {
             customBackground = `/uploads/invitations/${req.file.filename}`;
         }
 
-        // 3. Upsert Invitation (Create if new, Update if exists)
-        const existingInvite = await prisma.invitation.findUnique({ where: { weddingId: wedding.id } });
+        // 2. Find Existing Invitation
+        let existingInvite = null;
 
+        if (invitationId) {
+            // If ID is provided, look for that specific design
+            existingInvite = await prisma.invitation.findUnique({ where: { id: invitationId } });
+            if (existingInvite && existingInvite.weddingId !== weddingId) {
+                return res.status(403).json({ success: false, message: "Unauthorized access to invitation" });
+            }
+        } else {
+            // Otherwise, check if one already exists for this Event + View combination
+            existingInvite = await prisma.invitation.findFirst({
+                where: {
+                    weddingId,
+                    eventId: eventId || null,
+                    visibility: visibility || 'SHARED'
+                }
+            });
+        }
+
+        // 3. Upsert Invitation (Create if new, Update if exists)
         let invitation;
         if (existingInvite) {
             invitation = await prisma.invitation.update({
@@ -30,16 +48,19 @@ export const saveCustomInvitation = async (req, res) => {
                     isCustom: true,
                     templateId: "CUSTOM",
                     canvasData: typeof canvasData === 'string' ? JSON.parse(canvasData) : canvasData,
-                    ...(customBackground && { customBackground }) // Only update if new image uploaded
+                    updatedById: userId, // Track who edited the canvas
+                    ...(customBackground && { customBackground })
                 }
             });
         } else {
             invitation = await prisma.invitation.create({
                 data: {
-                    userId,
-                    weddingId: wedding.id,
+                    createdById: userId, // Use new creator relation
+                    weddingId,
+                    eventId: eventId || null,
+                    visibility: visibility || 'SHARED',
                     token: generateToken(),
-                    message: "Join us for our wedding", // default required field
+                    message: "Join us for our wedding",
                     templateId: "CUSTOM",
                     isCustom: true,
                     canvasData: typeof canvasData === 'string' ? JSON.parse(canvasData) : canvasData,
@@ -47,6 +68,16 @@ export const saveCustomInvitation = async (req, res) => {
                 }
             });
         }
+
+        await logActivity(
+            weddingId,
+            userId,
+            existingInvite ? 'UPDATE' : 'CREATE',
+            'INVITATION',
+            { invitationId: invitation.id, isCustom: true },
+            eventId || null,
+            visibility || 'SHARED'
+        );
 
         res.json({ success: true, invitation });
 

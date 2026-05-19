@@ -1,7 +1,8 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { register, login, logout } from '../controllers/auth.controller.js';
+import { register, login, logout, addCollaborator } from '../controllers/auth.controller.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { requireAuth } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
@@ -13,5 +14,6 @@ const authLimiter = rateLimit({
 router.post('/register', authLimiter, asyncHandler(register));
 router.post('/login', authLimiter, asyncHandler(login));
 router.post('/logout', asyncHandler(logout));
+router.post('/collaborator', requireAuth, asyncHandler(addCollaborator));
 
 export default router;
