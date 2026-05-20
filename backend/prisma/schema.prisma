@@ -62,15 +62,17 @@ model User {
   weddingMembers WeddingMember[]
   activityLogs   ActivityLog[]
 
-  createdEvents      Event[]         @relation("EventCreatedBy")
-  createdInvitations Invitation[]    @relation("InvitationCreatedBy")
-  updatedInvitations Invitation[]    @relation("InvitationUpdatedBy")
-  createdGuests      Guest[]         @relation("GuestCreatedBy")
-  updatedGuests      Guest[]         @relation("GuestUpdatedBy")
-  createdBudgetItems BudgetItem[]    @relation("BudgetCreatedBy")
-  updatedBudgetItems BudgetItem[]    @relation("BudgetUpdatedBy")
-  createdTasks       ChecklistTask[] @relation("TaskCreatedBy")
-  updatedTasks       ChecklistTask[] @relation("TaskUpdatedBy")
+  createdEvents       Event[]             @relation("EventCreatedBy")
+  createdInvitations  Invitation[]        @relation("InvitationCreatedBy")
+  updatedInvitations  Invitation[]        @relation("InvitationUpdatedBy")
+  createdGuests       Guest[]             @relation("GuestCreatedBy")
+  updatedGuests       Guest[]             @relation("GuestUpdatedBy")
+  createdBudgetItems  BudgetItem[]        @relation("BudgetCreatedBy")
+  updatedBudgetItems  BudgetItem[]        @relation("BudgetUpdatedBy")
+  createdTasks        ChecklistTask[]     @relation("TaskCreatedBy")
+  updatedTasks        ChecklistTask[]     @relation("TaskUpdatedBy")
+  createdInspirations PinnedInspiration[] @relation("InspirationCreatedBy")
+  updatedInspirations PinnedInspiration[] @relation("InspirationUpdatedBy")
 }
 
 model Wedding {
@@ -86,13 +88,14 @@ model Wedding {
   suggestedVenueName  String?
   suggestedVendorNote String?
 
-  members        WeddingMember[]
-  events         Event[]
-  guests         Guest[]
-  budgetItems    BudgetItem[]
-  invitations    Invitation[]
-  checklistTasks ChecklistTask[]
-  activityLogs   ActivityLog[]
+  members            WeddingMember[]
+  events             Event[]
+  guests             Guest[]
+  budgetItems        BudgetItem[]
+  invitations        Invitation[]
+  checklistTasks     ChecklistTask[]
+  activityLogs       ActivityLog[]
+  pinnedInspirations PinnedInspiration[]
 }
 
 model Guest {
@@ -278,11 +281,38 @@ model Event {
   wedding   Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   createdBy User    @relation("EventCreatedBy", fields: [createdById], references: [id])
 
-  guests       Guest[]
-  budgetItems  BudgetItem[]
-  tasks        ChecklistTask[]
-  invitations  Invitation[]
-  activityLogs ActivityLog[]
+  guests             Guest[]
+  budgetItems        BudgetItem[]
+  tasks              ChecklistTask[]
+  invitations        Invitation[]
+  activityLogs       ActivityLog[]
+  pinnedInspirations PinnedInspiration[]
 
   @@index([weddingId])
+}
+
+model PinnedInspiration {
+  id          String     @id @default(uuid())
+  weddingId   String
+  eventId     String?
+  createdById String
+  updatedById String?
+  visibility  Visibility @default(SHARED)
+
+  imageUrl String
+  title    String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wedding   Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  event     Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("InspirationCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?   @relation("InspirationUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([weddingId])
+  @@index([eventId])
+  @@index([createdById])
+  @@index([updatedById])
 }

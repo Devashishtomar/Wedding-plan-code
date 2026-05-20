@@ -22,6 +22,8 @@ const AIAssistant = lazy(() => import("./pages/AIAssistant"));
 const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const AppLayout = lazy(() => import("./components/layout/AppLayout"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Inspiration = lazy(() => import("./pages/Inspiration"));
+
 
 import { EventProvider } from "@/contexts/EventContext";
 
@@ -52,6 +54,7 @@ const App = () => (
                 <Route path="/budget" element={<WeddingGuard><Budget /></WeddingGuard>} />
                 <Route path="/assistant" element={<WeddingGuard><AIAssistant /></WeddingGuard>} />
                 <Route path="/account" element={<AccountSettings />} />
+                <Route path="/inspiration" element={<WeddingGuard><Inspiration /></WeddingGuard>} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

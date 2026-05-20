@@ -16,6 +16,7 @@ import rsvpRoutes from './routes/rsvp.routes.js';
 import aiRoutes from "./routes/ai.routes.js";
 import publicRoutes from "./routes/public.routes.js";
 import eventRoutes from "./routes/event.routes.js";
+import inspirationRoutes from './routes/inspiration.routes.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 
 export const app = express();
@@ -106,5 +107,6 @@ app.use('/api/rsvp', rsvpRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/events", eventRoutes);
+app.use('/api/inspirations', inspirationRoutes);
 
 app.use(errorMiddleware);

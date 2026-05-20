@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Heart, LayoutDashboard, Settings, Users, Mail, DollarSign, MessageCircle, CheckSquare, User, LogOut, Edit } from "lucide-react";
+import { Heart, LayoutDashboard, Settings, Users, Mail, DollarSign, MessageCircle, CheckSquare, User, LogOut, Edit, Store, Sparkles, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -47,6 +47,7 @@ const navItems = [
   { label: "Invitations", path: "/invitations", icon: Mail },
   { label: "Budget", path: "/budget", icon: DollarSign },
   { label: "AI Assistant", path: "/assistant", icon: MessageCircle },
+  { label: "Inspiration", path: "/inspiration", icon: Sparkles },
 ];
 
 const AppSidebar = () => {

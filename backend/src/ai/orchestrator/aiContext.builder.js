@@ -13,11 +13,20 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
         select: { id: true, name: true }
     }) || { id: userId, name: "User" };
 
+    // FIXED: Forcibly inject the exact eventId to guarantee 100% strict isolation,
+    // bypassing any Express 'req.query' bugs from the controller.
+    const strictFilter = { ...visibilityFilter };
+    if (eventId && eventId !== 'all') {
+        strictFilter.eventId = eventId;
+    } else {
+        delete strictFilter.eventId;
+    }
+
     // Dashboard summary (primary aggregator)
     const dashboard = await getDashboardSummary({
         user,
         weddingId,
-        visibilityFilter,
+        visibilityFilter: strictFilter, // FIXED: Pass strict filter
         eventId: eventId === 'all' ? null : (eventId || null)
     });
 
@@ -70,7 +79,7 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
 
     // Budget - FULL DATA
     const budgetItems = await prisma.budgetItem.findMany({
-        where: visibilityFilter,
+        where: strictFilter,
         select: {
             id: true,
             category: true,
@@ -79,21 +88,18 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
         },
     });
 
-    const targetOrAllocated = dashboard.budget.target || dashboard.budget.allocated || 0;
-
     const budget = {
-        totalPlanned: targetOrAllocated,
-        totalEstimated: dashboard.budget.estimated || 0,
-        totalSpent: dashboard.budget.spent || 0,
-        remaining: targetOrAllocated - (dashboard.budget.spent || 0),
+        target: dashboard.budget.target || 0,
+        allocated: dashboard.budget.allocated || 0,
+        estimated: dashboard.budget.estimated || 0,
+        spent: dashboard.budget.spent || 0,
         itemsCount: budgetItems.length,
-        hasAnyBudget: targetOrAllocated > 0,
         items: budgetItems,
     };
 
     // Checklist - FULL DATA
     const fullTasks = await prisma.checklistTask.findMany({
-        where: visibilityFilter,
+        where: strictFilter,
         include: {
             subtasks: {
                 select: {
@@ -131,7 +137,7 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
 
     // Guests - FULL DATA
     const allGuests = await prisma.guest.findMany({
-        where: visibilityFilter,
+        where: strictFilter,
         select: {
             id: true,
             name: true,
@@ -170,7 +176,7 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
 
     // Invitation
     const invitationRecord = await prisma.invitation.findFirst({
-        where: visibilityFilter,
+        where: strictFilter,
         select: {
             id: true,
             message: true,
