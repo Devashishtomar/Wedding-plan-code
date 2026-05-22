@@ -22,6 +22,16 @@ enum Visibility {
   SHARED
 }
 
+enum ArrangementType {
+  SEATING
+  ROOMS
+}
+
+enum TableShape {
+  CIRCULAR
+  RECTANGULAR
+}
+
 model WeddingMember {
   id        String @id @default(uuid())
   userId    String
@@ -73,6 +83,8 @@ model User {
   updatedTasks        ChecklistTask[]     @relation("TaskUpdatedBy")
   createdInspirations PinnedInspiration[] @relation("InspirationCreatedBy")
   updatedInspirations PinnedInspiration[] @relation("InspirationUpdatedBy")
+  createdArrangements Arrangement[]       @relation("ArrangementCreatedBy")
+  updatedArrangements Arrangement[]       @relation("ArrangementUpdatedBy")
 }
 
 model Wedding {
@@ -96,6 +108,7 @@ model Wedding {
   checklistTasks     ChecklistTask[]
   activityLogs       ActivityLog[]
   pinnedInspirations PinnedInspiration[]
+  arrangements       Arrangement[]
 }
 
 model Guest {
@@ -112,11 +125,13 @@ model Guest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  wedding   Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
-  event     Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  createdBy User          @relation("GuestCreatedBy", fields: [createdById], references: [id])
-  updatedBy User?         @relation("GuestUpdatedBy", fields: [updatedById], references: [id])
-  invites   GuestInvite[]
+  wedding         Wedding          @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  event           Event?           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy       User             @relation("GuestCreatedBy", fields: [createdById], references: [id])
+  updatedBy       User?            @relation("GuestUpdatedBy", fields: [updatedById], references: [id])
+  invites         GuestInvite[]
+  seatAssignments SeatAssignment[]
+  roomAssignments RoomAssignment[]
 
   @@unique([email, eventId])
   @@index([weddingId])
@@ -237,8 +252,8 @@ model GuestInvite {
   sentAt       DateTime?
   respondedAt  DateTime?
 
-  guest      Guest      @relation(fields: [guestId], references: [id])
-  invitation Invitation @relation(fields: [invitationId], references: [id])
+  guest      Guest      @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  invitation Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
 
   @@index([guestId])
   @@index([invitationId])
@@ -287,6 +302,7 @@ model Event {
   invitations        Invitation[]
   activityLogs       ActivityLog[]
   pinnedInspirations PinnedInspiration[]
+  arrangements       Arrangement[]
 
   @@index([weddingId])
 }
@@ -315,4 +331,106 @@ model PinnedInspiration {
   @@index([eventId])
   @@index([createdById])
   @@index([updatedById])
+}
+
+model Arrangement {
+  id          String     @id @default(uuid())
+  weddingId   String
+  eventId     String?
+  createdById String
+  updatedById String?
+  visibility  Visibility @default(SHARED)
+
+  name        String
+  type        ArrangementType
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wedding   Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  event     Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("ArrangementCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?   @relation("ArrangementUpdatedBy", fields: [updatedById], references: [id])
+
+  tables      SeatingTable[]
+  rooms       HotelRoom[]
+  localGuests ArrangementGuest[]
+
+  @@index([weddingId])
+  @@index([eventId])
+  @@index([createdById])
+  @@index([updatedById])
+}
+
+model SeatingTable {
+  id            String     @id @default(uuid())
+  arrangementId String
+  name          String
+  shape         TableShape @default(CIRCULAR)
+  capacity      Int        @default(8)
+  category      String?
+
+  arrangement Arrangement      @relation(fields: [arrangementId], references: [id], onDelete: Cascade)
+  assignments SeatAssignment[]
+
+  @@index([arrangementId])
+}
+
+model SeatAssignment {
+  id                 String  @id @default(uuid())
+  tableId            String
+  seatIndex          Int
+  guestId            String?
+  arrangementGuestId String?
+
+  table            SeatingTable      @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  guest            Guest?            @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  arrangementGuest ArrangementGuest? @relation(fields: [arrangementGuestId], references: [id], onDelete: Cascade)
+
+  @@unique([tableId, seatIndex])
+  @@index([tableId])
+  @@index([guestId])
+  @@index([arrangementGuestId])
+}
+
+model ArrangementGuest {
+  id            String   @id @default(uuid())
+  arrangementId String
+  name          String
+  createdAt     DateTime @default(now())
+
+  arrangement     Arrangement      @relation(fields: [arrangementId], references: [id], onDelete: Cascade)
+  assignments     SeatAssignment[]
+  roomAssignments RoomAssignment[]
+
+  @@index([arrangementId])
+}
+
+model HotelRoom {
+  id            String  @id @default(uuid())
+  arrangementId String
+  roomNumber    String
+  familyName    String?
+  capacity      Int     @default(2)
+
+  arrangement Arrangement      @relation(fields: [arrangementId], references: [id], onDelete: Cascade)
+  assignments RoomAssignment[]
+
+  @@index([arrangementId])
+}
+
+model RoomAssignment {
+  id                 String  @id @default(uuid())
+  roomId             String
+  guestId            String? // Optional property allows arrangement companions allocation
+  arrangementGuestId String? // Captures isolated local View companion rows securely
+
+  room             HotelRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  guest            Guest?            @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  arrangementGuest ArrangementGuest? @relation(fields: [arrangementGuestId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([guestId])
+  @@index([arrangementGuestId])
 }

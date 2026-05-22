@@ -552,20 +552,49 @@ const Guests = () => {
                           <TableCell className="text-right space-x-2">
                             {canManageGuests && (
                               <>
-                                {/* FIXED: Hide Send/Fill actions when in All Events view to prevent bulk confusion */}
-                                {selectedEventId !== 'all' && !hasInviteBeenSent && (
-                                  isInvitationFilled ? (
-                                    <Button size="sm" disabled={sendingInvite[guest.id]} onClick={() => handleSendEmail(guest)}>
-                                      <Send className="h-3 w-3 mr-1" />
-                                      Send Email
-                                    </Button>
-                                  ) : (
-                                    <Link to="/invitations">
-                                      <Button size="sm" variant="outline">
-                                        <FileEdit className="h-3 w-3 mr-1" />
-                                        Fill Invitation
+                                {/* FIXED: Allow Master Global guests to be invited from All Events view, while shielding sub-event guests */}
+                                {!hasInviteBeenSent && (
+                                  selectedEventId === 'all' ? (
+                                    guest.eventId === null ? (
+                                      isInvitationFilled ? (
+                                        <Button size="sm" disabled={sendingInvite[guest.id]} onClick={() => handleSendEmail(guest)}>
+                                          <Send className="h-3 w-3 mr-1" />
+                                          Send Wedding Email
+                                        </Button>
+                                      ) : (
+                                        <Link to="/invitations">
+                                          <Button size="sm" variant="outline">
+                                            <FileEdit className="h-3 w-3 mr-1" />
+                                            Fill Wedding Invitation
+                                          </Button>
+                                        </Link>
+                                      )
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        disabled
+                                        title="To send this specific event invitation, please switch to that event's tab."
+                                      >
+                                        <Send className="h-3 w-3 mr-1 opacity-50" />
+                                        Invite via Event Tab
                                       </Button>
-                                    </Link>
+                                    )
+                                  ) : (
+                                    /* Standard template rendering when scoped to an individual event tab */
+                                    isInvitationFilled ? (
+                                      <Button size="sm" disabled={sendingInvite[guest.id]} onClick={() => handleSendEmail(guest)}>
+                                        <Send className="h-3 w-3 mr-1" />
+                                        Send Email
+                                      </Button>
+                                    ) : (
+                                      <Link to="/invitations">
+                                        <Button size="sm" variant="outline">
+                                          <FileEdit className="h-3 w-3 mr-1" />
+                                          Fill Invitation
+                                        </Button>
+                                      </Link>
+                                    )
                                   )
                                 )}
                                 <Button

@@ -46,8 +46,9 @@ const navItems = [
   { label: "Guests", path: "/guests", icon: Users },
   { label: "Invitations", path: "/invitations", icon: Mail },
   { label: "Budget", path: "/budget", icon: DollarSign },
-  { label: "AI Assistant", path: "/assistant", icon: MessageCircle },
   { label: "Inspiration", path: "/inspiration", icon: Sparkles },
+  { label: "Planner", path: "/planner", icon: LayoutGrid },
+  { label: "AI Assistant", path: "/assistant", icon: MessageCircle },
 ];
 
 const AppSidebar = () => {

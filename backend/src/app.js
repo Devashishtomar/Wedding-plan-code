@@ -17,6 +17,7 @@ import aiRoutes from "./routes/ai.routes.js";
 import publicRoutes from "./routes/public.routes.js";
 import eventRoutes from "./routes/event.routes.js";
 import inspirationRoutes from './routes/inspiration.routes.js';
+import plannerRoutes from './routes/planner.routes.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 
 export const app = express();
@@ -108,5 +109,6 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/events", eventRoutes);
 app.use('/api/inspirations', inspirationRoutes);
+app.use('/api/arrangements', plannerRoutes);
 
 app.use(errorMiddleware);
