@@ -120,11 +120,13 @@ export const addCollaborator = async ({ name, email, password, role, side, permi
     const isCouple = role === 'BRIDE' || role === 'GROOM';
     const memberSide = isCouple ? role : (side === 'SHARED' ? null : (side || null));
 
+    const cleanDbRole = ['BRIDE', 'GROOM', 'FAMILY', 'OTHER', 'PENDING'].includes(role) ? role : 'OTHER';
+
     const newMember = await prisma.weddingMember.create({
         data: {
             userId: user.id,
             weddingId: weddingId,
-            role: role,
+            role: cleanDbRole,
             side: memberSide,
             canViewPrivate: isCouple ? true : permissions?.canViewPrivate || false,
             canEditPrivate: isCouple ? true : permissions?.canEditPrivate || false,

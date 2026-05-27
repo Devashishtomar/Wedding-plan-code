@@ -13,6 +13,11 @@ import {
   defaultTextStyle,
 } from "@/types/customInvitation";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 import EditorToolbar from "./EditorToolbar";
 import EditorCanvas from "./EditorCanvas";
 import EditorSidebar from "./EditorSidebar";
@@ -30,10 +35,56 @@ const CustomEditorPage = ({ onBack, initialData, onCollapseSidebar }: CustomEdit
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingStepText, setLoadingStepText] = useState("Analyzing your prompt context...");
+  const [quota, setQuota] = useState({ used: 0, total: 2, remaining: 2 });
 
   const [invitation, setInvitation] = useState<CustomInvitationData>(
     initialData || createDefaultCustomInvitation()
   );
+
+  // Fetch quota parameters whenever modal visibility shifts open
+  const fetchQuotaDetails = useCallback(async () => {
+    try {
+      const response = await api.get('/api/ai/invitations/quota');
+      if (response.data) {
+        setQuota({
+          used: response.data.used,
+          total: response.data.total,
+          remaining: response.data.remaining
+        });
+      }
+    } catch (err) {
+      console.error("Failed fetching account operational limits configuration variables:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAiModalOpen) {
+      fetchQuotaDetails();
+    }
+  }, [isAiModalOpen, fetchQuotaDetails]);
+
+  useEffect(() => {
+    let internalInterval: ReturnType<typeof setInterval>;
+    if (isGenerating) {
+      const statusPhrases = [
+        "Analyzing prompt metrics...",
+        "Structuring proportional coordinate positions...",
+        "Invoking custom gpt-image-1 canvas assets...",
+        "Converting binary assets stream matrices...",
+        "Finalizing canvas structure hydration maps..."
+      ];
+      let selectionIdx = 0;
+      internalInterval = setInterval(() => {
+        selectionIdx = (selectionIdx + 1) % statusPhrases.length;
+        setLoadingStepText(statusPhrases[selectionIdx]);
+      }, 2500);
+    }
+    return () => clearInterval(internalInterval);
+  }, [isGenerating]);
 
   // Auto-collapse main sidebar when editor opens
   useEffect(() => {
@@ -235,6 +286,60 @@ const CustomEditorPage = ({ onBack, initialData, onCollapseSidebar }: CustomEdit
     }
   }, [invitation, toast, onBack]);
 
+  // ─── NETWORK TRANSACTION HANDLER SUBMITTING TO CLOUD COMPOSER ENGINE ───
+  const handleAiTemplateGeneration = async () => {
+    if (!aiPrompt.trim()) {
+      toast({ title: "Prompt Empty", description: "Please provide explicit design ideas before running execution frames.", variant: "destructive" });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      // Establish 3-Pillar Context alignments cleanly for endpoint parameter propagation
+      const visibilityString = viewMode === 'individual'
+        ? (role === 'BRIDE' ? 'BRIDE_PRIVATE' : 'GROOM_PRIVATE')
+        : 'SHARED';
+
+      const apiPayload = {
+        prompt: aiPrompt.trim(),
+        visibility: visibilityString,
+        eventId: selectedEventId === 'all' ? null : selectedEventId,
+        eventType: "Wedding", // Defaults layout metrics configuration tags elegantly
+        content: {}, // Can optionally absorb dynamic pre-filled text entries securely
+        canvasSize: {
+          width: invitation.canvasSize?.width || 800,
+          height: invitation.canvasSize?.height || 1200
+        }
+      };
+
+      const response = await api.post('/api/ai/invitations/generate', apiPayload);
+
+      if (response.data?.success && response.data?.canvasData) {
+        // Hydrate and overwrite local canvas elements memory seamlessly
+        setInvitation(response.data.canvasData);
+        setSelectedElementId(null); // Clear selected item boundaries to prevent index clipping
+        setIsAiModalOpen(false);
+        setAiPrompt("");
+
+        toast({
+          title: "Invite Generated Successfully!",
+          description: "AI Generator complete. Every layer text and backdrop element remains fully editable.",
+        });
+      } else {
+        throw new Error("Invalid structure map returned from target cloud engine pipelines.");
+      }
+    } catch (error: any) {
+      console.error("AI Generation Network Exception:", error);
+      toast({
+        title: "Composition Generation Failed",
+        description: error.response?.data?.message || "An error occurred connecting over remote generation links.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleDownload = useCallback(async () => {
     if (!canvasRef.current) return;
 
@@ -298,6 +403,7 @@ const CustomEditorPage = ({ onBack, initialData, onCollapseSidebar }: CustomEdit
         onDelete={() => selectedElementId && deleteElement(selectedElementId)}
         hasSelectedElement={!!selectedElementId}
         isSaving={isSaving}
+        onAiGenerate={() => setIsAiModalOpen(true)}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -322,6 +428,85 @@ const CustomEditorPage = ({ onBack, initialData, onCollapseSidebar }: CustomEdit
           onUpdateBorder={updateBorder}
         />
       </div>
+      {/* ─── MODAL PANEL RECEIVING TEXT DESIGN INSTRUCTIONS PROMPTS ─── */}
+      <Dialog open={isAiModalOpen} onOpenChange={(open) => !isGenerating && setIsAiModalOpen(open)}>
+        <DialogContent className="rounded-3xl max-w-md p-6 bg-card border shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold font-display flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary fill-current" />
+              Generate Design with AI
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-muted-foreground mt-1 leading-normal">
+              Type your design ideas below. The AI pipeline will construct structured editable text blocks, borders, and matching graphic backdrop assets.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3 relative">
+            {/* ─── QUOTA VOLUME DISPLAY SEGMENT AREA ─── */}
+            <div className="bg-muted/40 border border-border/60 p-3 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="flex items-center text-muted-foreground gap-1.5">
+                  Usage Limits Quota
+                  <span className="cursor-help text-[10px] bg-muted px-1.5 py-0.5 rounded-md border text-foreground" title="Limit is 2 generations per 5 hours standard rolling window interval bounds.">i</span>
+                </span>
+                <span className={quota.remaining === 0 ? "text-destructive" : "text-primary"}>
+                  {quota.remaining} / {quota.total} Available
+                </span>
+              </div>
+
+              {/* Proportional graphical progress tracking bar width calculations */}
+              <div className="w-full bg-muted border border-border/30 h-2 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${quota.remaining === 0 ? 'bg-destructive' : 'bg-primary'}`}
+                  style={{ width: `${(quota.remaining / quota.total) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="prompt" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Design Concept Prompt</Label>
+              <Textarea
+                id="prompt"
+                disabled={isGenerating || quota.remaining === 0}
+                placeholder={quota.remaining === 0 ? "Generation threshold reached. Please check back in a few hours." : "e.g., Royal luxury theme wedding card with deep maroon canvas backdrop and fine ornate gold leaf border accents..."}
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                className="min-h-[100px] bg-background/50 rounded-xl resize-none text-sm font-medium focus-visible:ring-primary/20 border-border"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 border-t pt-4 mt-2">
+            <Button
+              variant="outline"
+              disabled={isGenerating}
+              onClick={() => setIsAiModalOpen(false)}
+              className="rounded-xl font-bold px-4 h-9"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={isGenerating || quota.remaining === 0}
+              onClick={async () => {
+                await handleAiTemplateGeneration();
+                fetchQuotaDetails(); // Refresh remaining counter parameters following execution loop completions
+              }}
+              className="rounded-xl font-bold px-4 h-9 bg-primary hover:bg-primary/90 text-white disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <span className="animate-fade-in text-xs font-medium tracking-tight text-white/90">
+                  {loadingStepText}
+                </span>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4 shrink-0 fill-current" />
+                  Generate Invitation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

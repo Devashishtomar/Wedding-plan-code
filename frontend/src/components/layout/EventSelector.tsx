@@ -135,11 +135,11 @@ const EventSelector: React.FC = () => {
             size="sm"
             asChild
             className="h-8 gap-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors px-2"
-            title="Manage All Events"
+            title="Manage All Events And Users"
           >
             <Link to="/account">
               <Settings2 className="h-4 w-4" />
-              <span className="text-[10px] font-bold uppercase tracking-wider hidden xl:inline">Manage Events</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider hidden xl:inline">Manage Events & Users</span>
             </Link>
           </Button>
         )}

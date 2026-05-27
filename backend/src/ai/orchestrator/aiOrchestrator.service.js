@@ -22,7 +22,7 @@ export class AIOrchestratorService {
     /**
      * Handle a single user message
      */
-    async handleMessage({ userId, weddingId, message, appBaseUrl, visibilityFilter, eventId, view }) {
+    async handleMessage({ userId, weddingId, message, appBaseUrl, visibilityFilter, eventId, view, currency }) {
         // Step 1: Load pending action (if any)
         const pendingAction = getPendingAction(userId);
 
@@ -46,8 +46,8 @@ export class AIOrchestratorService {
                         action: pendingAction.action,
                         payload: pendingAction.payload,
                         appBaseUrl,
-                        eventId,
-                        view
+                        eventId: pendingAction.eventId,
+                        view: pendingAction.view
                     });
 
                     const response = {
@@ -113,7 +113,8 @@ export class AIOrchestratorService {
             weddingId,
             visibilityFilter,
             eventId,
-            view
+            view,
+            currency: currency || 'USD'
         });
 
         // Reflect pending state in context
@@ -138,6 +139,8 @@ export class AIOrchestratorService {
                 action: aiResponse.action,
                 payload: aiResponse.payload,
                 message: aiResponse.message,
+                eventId,
+                view
             });
 
             return {
@@ -154,15 +157,17 @@ export class AIOrchestratorService {
     }
 
     /**
-     * Store a proposed action safely
-     * Called AFTER AI suggests an action
-     */
-    proposeAction({ userId, action, payload, message }) {
+         * Store a proposed action safely
+         * Called AFTER AI suggests an action
+         */
+    proposeAction({ userId, action, payload, message, eventId, view }) {
         const pending = setPendingAction({
             userId,
             action,
             payload,
             message,
+            eventId,
+            view
         });
 
         return {

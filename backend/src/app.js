@@ -18,6 +18,8 @@ import publicRoutes from "./routes/public.routes.js";
 import eventRoutes from "./routes/event.routes.js";
 import inspirationRoutes from './routes/inspiration.routes.js';
 import plannerRoutes from './routes/planner.routes.js';
+import marketplaceRoutes from './routes/marketplace.routes.js';
+import aiInvitationRouter from './routes/aiInvitation.routes.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 
 export const app = express();
@@ -61,7 +63,7 @@ app.use(cors(corsOptions));
 // Global rate limit
 app.use(
     rateLimit({
-        windowMs: 15 * 60 * 1000,
+        windowMs: 1 * 60 * 1000,
         max: 100,
         standardHeaders: true,
         legacyHeaders: false,
@@ -110,5 +112,7 @@ app.use("/api/public", publicRoutes);
 app.use("/api/events", eventRoutes);
 app.use('/api/inspirations', inspirationRoutes);
 app.use('/api/arrangements', plannerRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/ai/invitations', aiInvitationRouter);
 
 app.use(errorMiddleware);

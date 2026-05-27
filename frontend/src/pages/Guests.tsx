@@ -504,10 +504,10 @@ const Guests = () => {
                           <TableCell className="font-medium">
                             <div className="flex flex-col">
                               <span>{guest.name}</span>
-                              <div className="flex flex-wrap gap-1 mt-0.5">
+                              <div className="flex flex-wrap gap-1 mt-1">
                                 {guest.eventNames.map((evtName: string, idx: number) => (
                                   <Badge key={idx} variant="outline" className={cn(
-                                    "text-[9px] uppercase font-bold py-0 h-4 border-primary/20",
+                                    "text-[9px] uppercase font-bold py-0.5 px-2 whitespace-nowrap w-fit border-primary/20 leading-tight",
                                     evtName === 'All Events' ? "bg-muted text-muted-foreground" : "bg-primary/5 text-primary"
                                   )}>
                                     {evtName}
@@ -710,7 +710,7 @@ const Guests = () => {
                             <span>{response.name}</span>
                             {selectedEventId === 'all' && response.eventName && (
                               <div className="mt-1">
-                                <Badge variant="outline" className="text-[9px] uppercase font-bold py-0 h-4 bg-primary/5 text-primary border-primary/20">
+                                <Badge variant="outline" className="text-[9px] uppercase font-bold py-0.5 px-2 whitespace-nowrap w-fit bg-primary/5 text-primary border-primary/20 leading-tight">
                                   {response.eventName}
                                 </Badge>
                               </div>

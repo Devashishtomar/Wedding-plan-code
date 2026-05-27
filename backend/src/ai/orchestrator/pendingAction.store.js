@@ -9,6 +9,8 @@ export const setPendingAction = ({
     action,
     payload,
     message,
+    eventId,
+    view,
     ttlMs = DEFAULT_TTL_MS,
 }) => {
     const now = Date.now();
@@ -18,6 +20,8 @@ export const setPendingAction = ({
         action,
         payload,
         message,
+        eventId: eventId === 'all' ? null : (eventId || null),
+        view: view || 'SHARED',
         createdAt: now,
         expiresAt: now + ttlMs,
     };

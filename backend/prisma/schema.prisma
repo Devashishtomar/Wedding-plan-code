@@ -32,6 +32,41 @@ enum TableShape {
   RECTANGULAR
 }
 
+enum VendorCategory {
+  VENUE
+  PHOTOGRAPHER
+  MAKEUP_ARTIST
+  CATERER
+  DECORATOR
+  PLANNER
+  MEHNDI_ARTIST
+}
+
+enum PricingUnit {
+  PER_DAY
+  PER_EVENT
+  PER_PLATE
+  PACKAGE
+}
+
+enum VenueType {
+  BANQUET
+  HOTEL
+  LAWN
+  RESORT
+}
+
+enum PolicyType {
+  IN_HOUSE
+  EXTERNAL_ALLOWED
+  NOT_ALLOWED
+}
+
+enum PricingModel {
+  FIXED
+  PERCENTAGE
+}
+
 model WeddingMember {
   id        String @id @default(uuid())
   userId    String
@@ -85,6 +120,8 @@ model User {
   updatedInspirations PinnedInspiration[] @relation("InspirationUpdatedBy")
   createdArrangements Arrangement[]       @relation("ArrangementCreatedBy")
   updatedArrangements Arrangement[]       @relation("ArrangementUpdatedBy")
+  vendorReviews       VendorReview[]
+  shortlistedVendors  ShortlistedVendor[] @relation("ShortlistCreatedBy")
 }
 
 model Wedding {
@@ -109,6 +146,7 @@ model Wedding {
   activityLogs       ActivityLog[]
   pinnedInspirations PinnedInspiration[]
   arrangements       Arrangement[]
+  shortlistedVendors ShortlistedVendor[]
 }
 
 model Guest {
@@ -303,6 +341,7 @@ model Event {
   activityLogs       ActivityLog[]
   pinnedInspirations PinnedInspiration[]
   arrangements       Arrangement[]
+  shortlistedVendors ShortlistedVendor[]
 
   @@index([weddingId])
 }
@@ -370,6 +409,8 @@ model SeatingTable {
   shape         TableShape @default(CIRCULAR)
   capacity      Int        @default(8)
   category      String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now()) @updatedAt
 
   arrangement Arrangement      @relation(fields: [arrangementId], references: [id], onDelete: Cascade)
   assignments SeatAssignment[]
@@ -408,11 +449,13 @@ model ArrangementGuest {
 }
 
 model HotelRoom {
-  id            String  @id @default(uuid())
+  id            String   @id @default(uuid())
   arrangementId String
   roomNumber    String
   familyName    String?
-  capacity      Int     @default(2)
+  capacity      Int      @default(2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 
   arrangement Arrangement      @relation(fields: [arrangementId], references: [id], onDelete: Cascade)
   assignments RoomAssignment[]
@@ -433,4 +476,203 @@ model RoomAssignment {
   @@index([roomId])
   @@index([guestId])
   @@index([arrangementGuestId])
+}
+
+model Vendor {
+  id          String         @id @default(uuid())
+  name        String
+  category    VendorCategory
+  description String?
+
+  address   String
+  city      String
+  state     String
+  country   String
+  pincode   String?
+  latitude  Float?
+  longitude Float?
+
+  phone    String
+  email    String?
+  whatsapp String?
+  website  String?
+
+  images String[]
+  videos String[]
+
+  startingPrice Int?
+  pricingUnit   PricingUnit?
+
+  avgRating      Float? @default(0)
+  totalReviews   Int?   @default(0)
+  externalRating Float?
+
+  isActive Boolean  @default(true)
+  services String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  venueDetails   VenueDetails?
+  makeupDetails  MakeupArtistDetails?
+  photoDetails   PhotographerDetails?
+  catererDetails CatererDetails?
+  decorDetails   DecoratorDetails?
+  plannerDetails PlannerDetails?
+  mehndiDetails  MehndiArtistDetails?
+
+  shortlists ShortlistedVendor[]
+  reviews    VendorReview[]
+
+  @@index([city])
+  @@index([category])
+  @@index([startingPrice])
+  @@index([avgRating])
+}
+
+model VenueDetails {
+  id       String @id @default(uuid())
+  vendorId String @unique
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  venueType    VenueType
+  hallCapacity Int?
+  lawnCapacity Int?
+
+  roomsAvailable Int?
+  bridalSuite    Boolean @default(false)
+  groomRoom      Boolean @default(false)
+
+  amenities        String[]
+  parkingAvailable Boolean  @default(false)
+  parkingCapacity  Int?
+
+  cateringPolicy   PolicyType
+  alcoholPolicy    PolicyType
+  decorationPolicy PolicyType
+
+  starRating      Int?
+  peakSeasonPrice Int?
+  offSeasonPrice  Int?
+}
+
+model MakeupArtistDetails {
+  id       String @id @default(uuid())
+  vendorId String @unique
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  servicesOffered String[]
+  experienceYears Int
+  travels         Boolean  @default(false)
+  travelCost      Int?
+
+  bridalPrice    Int?
+  partyPrice     Int?
+  brandsUsed     String[]
+  trialAvailable Boolean  @default(false)
+}
+
+model PhotographerDetails {
+  id       String @id @default(uuid())
+  vendorId String @unique
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  services        String[]
+  experienceYears Int
+  deliveryDays    Int
+  teamSize        Int?
+  equipment       String[]
+
+  pricePerDay      Int?
+  fullPackagePrice Int?
+  albumIncluded    Boolean @default(false)
+}
+
+model CatererDetails {
+  id       String @id @default(uuid())
+  vendorId String @unique
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  cuisines            String[]
+  vegOnly             Boolean  @default(false)
+  vegPricePerPlate    Int?
+  nonVegPricePerPlate Int?
+  minGuestCount       Int?
+  services            String[]
+}
+
+model DecoratorDetails {
+  id       String @id @default(uuid())
+  vendorId String @unique
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  decorationTypes String[]
+  experienceYears Int
+  basicPrice      Int?
+  premiumPrice    Int?
+  materialsUsed   String[]
+  customizable    Boolean  @default(true)
+}
+
+model PlannerDetails {
+  id       String @id @default(uuid())
+  vendorId String @unique
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  services        String[]
+  experienceYears Int
+  eventsManaged   Int
+  teamSize        Int?
+  pricingModel    PricingModel
+}
+
+model MehndiArtistDetails {
+  id       String @id @default(uuid())
+  vendorId String @unique
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  styles          String[]
+  experienceYears Int
+  bridalPrice     Int?
+  pricePerHand    Int?
+  travels         Boolean  @default(false)
+}
+
+model ShortlistedVendor {
+  id String @id @default(uuid())
+
+  weddingId  String
+  eventId    String?
+  visibility Visibility @default(SHARED)
+
+  vendorId    String
+  createdById String
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  wedding   Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  event     Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  vendor    Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("ShortlistCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([weddingId, eventId, vendorId, visibility])
+  @@index([weddingId])
+  @@index([eventId])
+  @@index([vendorId])
+  @@index([weddingId, visibility, eventId])
+}
+
+model VendorReview {
+  id        String   @id @default(uuid())
+  vendorId  String
+  userId    String
+  rating    Float
+  comment   String?
+  createdAt DateTime @default(now())
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@index([userId])
 }

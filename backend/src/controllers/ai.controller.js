@@ -5,7 +5,7 @@ import { getVisibilityFilter } from "../utils/queryContext.utility.js";
  * POST /api/ai/message
  */
 export const handleAIMessage = async (req, res) => {
-    const { message, eventId, view } = req.body;
+    const { message, eventId, view, currency } = req.body;
 
     if (!message || typeof message !== "string") {
         return res.status(400).json({
@@ -28,7 +28,8 @@ export const handleAIMessage = async (req, res) => {
             appBaseUrl: req.app.locals.appBaseUrl,
             visibilityFilter,
             eventId: eventId || null,
-            view: view || 'SHARED'
+            view: view || 'SHARED',
+            currency: currency || 'USD'
         });
 
         res.json({

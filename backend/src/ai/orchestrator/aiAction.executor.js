@@ -216,11 +216,11 @@ export const executeAIAction = async ({
             const prisma = getPrisma();
 
             const wedding = await prisma.wedding.findFirst({
-                where: { userId },
+                where: { id: weddingId },
             });
 
             if (!wedding) {
-                throw new Error("Wedding not found");
+                throw new Error("Wedding not found matching the provided active session workspace reference tokens.");
             }
 
             return prisma.wedding.update({

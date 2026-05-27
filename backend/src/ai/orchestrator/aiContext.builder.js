@@ -1,11 +1,12 @@
 import { getPrisma } from "../../loaders/database.js";
 import { getDashboardSummary } from "../../services/dashboard.service.js";
 
-export const buildAIContext = async ({ userId, weddingId, visibilityFilter, eventId, view }) => {
+export const buildAIContext = async ({ userId, weddingId, visibilityFilter, eventId, view, currency }) => {
     const prisma = getPrisma();
 
     // Meta
     const now = new Date();
+    const currencySymbol = currency === 'INR' ? '₹' : '$';
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const user = await prisma.user.findUnique({
@@ -22,6 +23,21 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
         delete strictFilter.eventId;
     }
 
+    let activeEventDetails = null;
+    if (eventId && eventId !== 'all') {
+        activeEventDetails = await prisma.event.findFirst({
+            where: { id: eventId, weddingId }
+        });
+    }
+
+    const shortlistedVendors = await prisma.shortlistedVendor.findMany({
+        where: strictFilter,
+        include: {
+            vendor: true
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+
     // Dashboard summary (primary aggregator)
     const dashboard = await getDashboardSummary({
         user,
@@ -37,6 +53,7 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
                 dateToday: now.toISOString().split("T")[0],
                 timezone,
                 hasPendingAction: false,
+                currencySymbol,
             },
             wedding: {
                 exists: false,
@@ -151,8 +168,8 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
     const missingEmails = allGuests.filter(g => !g.email).length;
     if (missingEmails > 0) issues.push(`${missingEmails} guests are missing email addresses.`);
 
-    const budgetOver = budget.totalSpent > budget.totalPlanned;
-    if (budgetOver) issues.push(`The total spent (${budget.totalSpent}) exceeds the planned budget (${budget.totalPlanned}).`);
+    const budgetOver = budget.spent > budget.target;
+    if (budgetOver) issues.push(`The total spent (${currencySymbol}${budget.spent}) exceeds the planned target budget (${currencySymbol}${budget.target}).`);
 
     const overdueTasks = checklist.tasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < now).length;
     if (overdueTasks > 0) issues.push(`${overdueTasks} tasks are overdue.`);
@@ -206,7 +223,15 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
             dateToday: now.toISOString().split("T")[0],
             timezone,
             hasPendingAction: false, // will be overridden by orchestrator
-            issues, // AI will see these as primary pointers
+            issues,
+            currencySymbol,
+            activeEvent: activeEventDetails ? {
+                id: activeEventDetails.id,
+                name: activeEventDetails.name,
+                location: activeEventDetails.location || "Not assigned yet",
+                date: activeEventDetails.date ? activeEventDetails.date.toISOString().split("T")[0] : "Not set yet",
+                budgetAllocation: activeEventDetails.budget
+            } : { name: "Combined / All Events Dashboard Roll-up View" }
         },
         wedding,
         budget,
@@ -215,5 +240,13 @@ export const buildAIContext = async ({ userId, weddingId, visibilityFilter, even
         invitation,
         recentActivity: dashboard.recentActivity,
         capabilities,
+        shortlistedVendors: shortlistedVendors.map(sv => ({
+            id: sv.id,
+            notes: sv.notes || "",
+            vendorName: sv.vendor.name,
+            category: sv.vendor.category,
+            city: sv.vendor.city,
+            startingPrice: sv.vendor.startingPrice
+        }))
     };
 };

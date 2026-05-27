@@ -63,7 +63,7 @@ const Invitations = () => {
   const { setOpen } = useSidebar();
 
   const { selectedEventId, setSelectedEventId, events, selectedEvent, viewMode } = useEvent();
-  const { canEditCombinedView: canManageInvitations } = usePermissions();
+  const { canEditCombinedView: canManageInvitations, role, side } = usePermissions();
 
   const [copied, setCopied] = useState(false);
   const [allInvitations, setAllInvitations] = useState<any[]>([]);
@@ -74,6 +74,14 @@ const Invitations = () => {
 
   const [view, setView] = useState<"gallery" | "editor" | "share" | "custom-editor">("gallery");
   const [loading, setLoading] = useState(true);
+
+  const getInvitationVisibility = () => {
+    if (viewMode !== 'individual') return 'SHARED';
+
+    if (role === 'BRIDE') return 'BRIDE_PRIVATE';
+    if (role === 'GROOM') return 'GROOM_PRIVATE';
+    return side === 'BRIDE' ? 'BRIDE_PRIVATE' : 'GROOM_PRIVATE';
+  };
 
   const collapseSidebar = useCallback(() => {
     setOpen(false);
@@ -198,6 +206,7 @@ const Invitations = () => {
       const res = await api.post("/api/invitations", {
         templateId,
         eventId: selectedEventId === 'all' ? null : selectedEventId,
+        visibility: getInvitationVisibility(),
       });
 
       await loadInvitations();

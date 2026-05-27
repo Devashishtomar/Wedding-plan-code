@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Type, 
-  Image, 
-  ArrowLeft, 
-  Download, 
-  Save, 
-  Trash2
+import {
+  Type,
+  Image,
+  ArrowLeft,
+  Download,
+  Save,
+  Trash2,
+  Sparkles,
 } from "lucide-react";
 import {
   Tooltip,
@@ -23,6 +24,7 @@ interface EditorToolbarProps {
   onDelete: () => void;
   hasSelectedElement: boolean;
   isSaving: boolean;
+  onAiGenerate: () => void;
 }
 
 const EditorToolbar = ({
@@ -34,6 +36,7 @@ const EditorToolbar = ({
   onDelete,
   hasSelectedElement,
   isSaving,
+  onAiGenerate,
 }: EditorToolbarProps) => {
   return (
     <div className="h-10 border-b bg-background flex items-center justify-between px-3">
@@ -45,8 +48,24 @@ const EditorToolbar = ({
         </Button>
         <Separator orientation="vertical" className="h-5" />
         <span className="text-xs font-medium text-muted-foreground">Custom Editor</span>
-      </div>
 
+        <Separator orientation="vertical" className="h-5" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onAiGenerate}
+              className="h-7 px-2 text-xs font-bold text-primary hover:text-primary bg-primary/5 hover:bg-primary/10 rounded-md border border-primary/10 transition-all"
+            >
+              <Sparkles className="h-3 w-3 mr-1 fill-current" />
+              Generate with AI
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Generate an interactive layout canvas with AI</TooltipContent>
+        </Tooltip>
+      </div>
+      
       {/* Center - Quick add elements */}
       <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
         <Tooltip>

@@ -132,7 +132,10 @@ export async function renderCustomInvitationToImage(invitationId, weddingId) {
 
         const page = await browser.newPage();
         await page.setViewport({ width: width, height: height });
-        await page.setContent(html, { waitUntil: ['networkidle0', 'domcontentloaded'] });
+        await page.setContent(html, {
+            waitUntil: ['networkidle0', 'domcontentloaded'],
+            timeout: 60000,
+        });
         await page.evaluateHandle('document.fonts.ready');
 
         const buffer = await page.screenshot({ type: 'png' });

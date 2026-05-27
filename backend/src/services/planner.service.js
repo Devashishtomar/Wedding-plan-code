@@ -83,12 +83,19 @@ export const updateTableDetails = async (tableId, data) => {
     });
 };
 
-// ─── AFTER (SURGICAL REPLACEMENT REWRITE) ───
 export const assignGuestToSeat = async (tableId, seatIndex, guestId, isCompanion = false) => {
     const prisma = getPrisma();
 
     return await prisma.$transaction(async (tx) => {
-        // Safe clear sweep step completely avoids record-not-found errors on expanded table slots
+        // 1. Fetch the target table's parent arrangement sheet ID first to determine context boundaries
+        const targetTable = await tx.seatingTable.findUnique({
+            where: { id: tableId },
+            select: { arrangementId: true }
+        });
+
+        if (!targetTable) throw new Error("Target table structure not found");
+
+        // 2. Clear out whoever is currently occupying this specific seat index on this specific table
         await tx.seatAssignment.deleteMany({
             where: {
                 tableId,
@@ -96,9 +103,18 @@ export const assignGuestToSeat = async (tableId, seatIndex, guestId, isCompanion
             }
         });
 
-        if (!guestId) return null; // Interprets empty client slot targets as a clean wipe mutation request
+        if (!guestId) return null;
 
-        // Route assignment keys into the correct schema target fields
+        // 3. FIXED & SCOPED: Wipes this guest from any other seats ONLY within this specific arrangement sheet template.
+        // This ensures they can still have a designated seat at separate events (e.g. Sangeet vs Barat tables)!
+        await tx.seatAssignment.deleteMany({
+            where: {
+                table: { arrangementId: targetTable.arrangementId },
+                ...(isCompanion ? { arrangementGuestId: guestId } : { guestId })
+            }
+        });
+
+        // 4. Create the clean new assignment row map safely
         return await tx.seatAssignment.create({
             data: {
                 tableId,
@@ -145,19 +161,41 @@ export const updateRoomDetails = async (roomId, data) => {
 export const assignGuestToRoom = async (roomId, guestId) => {
     const prisma = getPrisma();
 
-    // Check occupancy levels before registering new members
-    const room = await prisma.hotelRoom.findUnique({
-        where: { id: roomId },
-        include: { assignments: true }
-    });
+    return await prisma.$transaction(async (tx) => {
+        const room = await tx.hotelRoom.findUnique({
+            where: { id: roomId },
+            include: { assignments: true }
+        });
 
-    if (!room) throw new Error("Target hotel room allocation card does not exist.");
-    if (room.assignments.length >= room.capacity) {
-        throw new Error("Target allocation room maximum capacity constraint has been reached.");
-    }
+        if (!room) throw new Error("Target hotel room allocation card does not exist.");
 
-    return await prisma.roomAssignment.create({
-        data: { roomId, guestId }
+        if (guestId) {
+            // Determine if the current payload target matches a core guest account or an isolated companion row
+            const isLocalCompanion = room.assignments.some(a => a.arrangementGuestId === guestId) || false;
+
+            // FIXED & SCOPED: Clear out any previous room assignments for this guest ONLY inside this arrangement card container context
+            await tx.roomAssignment.deleteMany({
+                where: {
+                    room: { arrangementId: room.arrangementId },
+                    ...(isLocalCompanion ? { arrangementGuestId: guestId } : { guestId })
+                }
+            });
+        }
+
+        // Re-calculate room allocation levels accurately *after* old occupant check-out strings resolve
+        const updatedRoomCount = await tx.roomAssignment.count({ where: { roomId } });
+        if (updatedRoomCount >= room.capacity) {
+            throw new Error("Target allocation room maximum capacity constraint has been reached.");
+        }
+
+        const isLocalCompanion = room.assignments.some(a => a.arrangementGuestId === guestId) || false;
+
+        return await tx.roomAssignment.create({
+            data: {
+                roomId,
+                ...(isLocalCompanion ? { arrangementGuestId: guestId } : { guestId })
+            }
+        });
     });
 };
 

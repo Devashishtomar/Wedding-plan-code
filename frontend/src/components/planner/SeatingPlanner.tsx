@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Users, Circle, Square, Trash2, GripVertical, X, Heart } from "lucide-react";
+import { Plus, Users, Circle, Square, Trash2, GripVertical, X, Heart, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,8 +50,7 @@ const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ arrangementId }) => {
   const [newGuestName, setNewGuestName] = useState("");
   const [sidebarSearch, setSidebarSearch] = useState("");
 
-  // 1. Fetch Hydrated Layout Configuration including database-persisted arrangement guests
-  const { data: arrangement } = useQuery<any>({
+  const { data: arrangement, isLoading: isLoadingArrangement } = useQuery<any>({
     queryKey: ['arrangement-detail', arrangementId],
     queryFn: async () => {
       const res = await api.get(`/api/arrangements/${arrangementId}`);
@@ -59,14 +58,18 @@ const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ arrangementId }) => {
     }
   });
 
-  // 2. Stream confirmed guests corresponding to active context parameters
-  const { data: confirmedGuests = [] } = useQuery<Guest[]>({
-    queryKey: ['confirmed-guests-sidebar', selectedEventId, viewMode],
+  const guestListEventId = arrangement?.eventId || "all";
+
+  const { data: confirmedGuests = [], isLoading: isLoadingConfirmedGuests } = useQuery<Guest[]>({
+    queryKey: ['confirmed-guests-sidebar', guestListEventId, viewMode],
     queryFn: async () => {
-      const res = await api.get(`/api/arrangements/guests/confirmed?view=${viewParam}&eventId=${selectedEventId}`);
+      const res = await api.get(`/api/arrangements/guests/confirmed?view=${viewParam}&eventId=${guestListEventId}`);
       return res.data?.guests || [];
-    }
+    },
+    enabled: !!arrangement
   });
+
+  const isSidebarLoading = isLoadingArrangement || isLoadingConfirmedGuests;
 
   // 3. Instant Persistence Mutation: Saves companions directly to arrangement data layers immediately
   const addCompanionMutation = useMutation({
@@ -226,7 +229,7 @@ const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ arrangementId }) => {
   return (
     <div className="flex flex-col h-full gap-8" >
       <div className="flex h-full gap-8">
-        <Card className="w-80 flex flex-col border-none shadow-xl bg-white/50 backdrop-blur-sm shrink-0">
+        <Card className="w-56 flex flex-col border-none shadow-xl bg-white/50 backdrop-blur-sm shrink-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
@@ -260,25 +263,35 @@ const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ arrangementId }) => {
           <CardContent className="flex-1 overflow-hidden p-0">
             <ScrollArea className="h-[500px] px-6">
               <div className="space-y-2 pb-6">
-                {filteredUnassignedGuests.map((guest: any) => (
-                  <div
-                    key={guest.id}
-                    draggable={canManageEvents}
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData("guestId", guest.id);
-                      if (guest.isCompanion) e.dataTransfer.setData("isCompanion", "true");
-                    }}
-                    className="guest-item group flex items-center p-2 rounded-lg hover:bg-white/60 transition-colors border border-transparent hover:border-white/40 cursor-grab active:cursor-grabbing shadow-sm bg-white/40"
-                  >
-                    <GripVertical className="h-4 w-4 text-muted-foreground/30 mr-2" />
-                    <span className="flex-1 font-medium text-sm">{guest.name}</span>
-                    {guest.isCompanion && (
-                      <Button variant="ghost" size="icon" onClick={() => deleteCompanionMutation.mutate(guest.id)} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
+                {/* FIXED: Wraps list rendering inside a conditional loading block to mask asynchronous lag glimpses */}
+                {isSidebarLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/60 gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary/70" />
+                    <p className="text-[11px] font-medium tracking-wide">Scoping guest ...</p>
                   </div>
-                ))}
+                ) : filteredUnassignedGuests.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-12 italic">No unassigned guests available.</p>
+                ) : (
+                  filteredUnassignedGuests.map((guest: any) => (
+                    <div
+                      key={guest.id}
+                      draggable={canManageEvents}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("guestId", guest.id);
+                        if (guest.isCompanion) e.dataTransfer.setData("isCompanion", "true");
+                      }}
+                      className="guest-item group flex items-center p-2 rounded-lg hover:bg-white/60 transition-colors border border-transparent hover:border-white/40 cursor-grab active:cursor-grabbing shadow-sm bg-white/40"
+                    >
+                      <GripVertical className="h-4 w-4 text-muted-foreground/30 mr-2" />
+                      <span className="flex-1 font-medium text-sm">{guest.name}</span>
+                      {guest.isCompanion && (
+                        <Button variant="ghost" size="icon" onClick={() => deleteCompanionMutation.mutate(guest.id)} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </ScrollArea>
           </CardContent>

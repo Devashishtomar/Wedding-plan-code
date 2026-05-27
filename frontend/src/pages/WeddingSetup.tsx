@@ -69,7 +69,7 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
     initialData?.weddingType || ""
   );
 
-  const [role, setRole] = useState<string>("");
+  const [role, setRole] = useState<string>(initialData?.role || "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,12 +305,13 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
             <Label>I am the...</Label>
             <Select
               value={role}
+              disabled={isEditing}
               onValueChange={(value) => {
                 setRole(value);
                 setErrors((prev) => ({ ...prev, role: undefined }));
               }}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className={cn("w-full", isEditing && "bg-muted text-muted-foreground cursor-not-allowed opacity-90 focus:ring-0 select-none")}>
                 <SelectValue placeholder="Select your role" />
               </SelectTrigger>
               <SelectContent>
@@ -318,7 +319,9 @@ const WeddingSetup = ({ isEditing = false, onClose, initialData, }: WeddingSetup
                 <SelectItem value="GROOM">Groom</SelectItem>
               </SelectContent>
             </Select>
-            {errors.role && (
+            {isEditing ? (
+              <p className="text-[10px] text-muted-foreground/80 italic mt-1 pl-0.5">Account roles are tied to user profile and cannot be altered from this view layout.</p>
+            ) : errors.role && (
               <p className="text-sm text-destructive">{errors.role}</p>
             )}
           </div>

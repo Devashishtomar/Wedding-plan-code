@@ -35,6 +35,18 @@ export const getInvitations = async ({ visibilityFilter }) => {
                     customBackground: invitation.customBackground,
                     createdAt: invitation.createdAt,
                     updatedAt: invitation.updatedAt,
+                    content: {
+                        title: null,
+                        names: null,
+                        message: null,
+                        date: null,
+                        time: null,
+                        venue: null,
+                        rsvpDate: null,
+                    },
+                    styles: {},
+                    globalFontFamily: null,
+
                 },
                 template: null,
                 resolvedFields: {}

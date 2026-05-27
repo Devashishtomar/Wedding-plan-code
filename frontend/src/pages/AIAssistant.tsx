@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Send, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEvent } from "@/contexts/EventContext";
-
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Message {
   id: string;
@@ -27,7 +27,8 @@ const suggestedQuestions = [
 
 const AIAssistant = () => {
   const { toast } = useToast();
-  const { selectedEventId, viewMode } = useEvent(); // FIXED: Extract the active tab and event dropdown state
+  const { selectedEventId, viewMode } = useEvent();
+  const queryClient = useQueryClient();
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [isThinking, setIsThinking] = useState(false);
@@ -58,8 +59,9 @@ const AIAssistant = () => {
     try {
       const targetEventId = selectedEventId === 'all' ? 'all' : selectedEventId;
       const targetView = viewMode === 'individual' ? 'PRIVATE' : 'SHARED';
+      const activeCurrency = localStorage.getItem("app_currency") || "USD";
 
-      const aiResponse = await sendAIMessage(text, targetEventId, targetView);
+      const aiResponse = await sendAIMessage(text, targetEventId, targetView, activeCurrency);
 
       if (aiResponse.type === "MESSAGE") {
         setMessages((prev) => [
@@ -70,6 +72,14 @@ const AIAssistant = () => {
             content: aiResponse.content,
           },
         ]);
+
+        if (aiResponse.result) {
+          queryClient.invalidateQueries();
+          toast({
+            title: "Planner Updated",
+            description: "The AI assistant successfully updated your workspace.",
+          });
+        }
       }
 
       if (aiResponse.type === "PROPOSE_ACTION") {

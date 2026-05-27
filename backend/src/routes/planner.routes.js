@@ -3,6 +3,7 @@ import { requireAuth } from '../middlewares/auth.middleware.js';
 import { requirePermission } from '../middlewares/rbac.middleware.js';
 import { requireWeddingSetup } from '../middlewares/onboarding.middleware.js';
 import * as PlannerController from '../controllers/planner.controller.js';
+import { exportRoomsToPdf } from '../controllers/plannerExport.controller.js';
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ router.use(requireWeddingSetup);
 router.get('/', PlannerController.fetchArrangements);
 router.get('/guests/confirmed', PlannerController.fetchConfirmedGuests);
 router.get('/:id', PlannerController.fetchArrangementDetail);
+router.get('/:id/pdf', exportRoomsToPdf);
 router.post('/', requirePermission('canManageEvents'), PlannerController.createArrangement);
 router.delete('/:id', requirePermission('canManageEvents', true), PlannerController.deleteArrangement);
 

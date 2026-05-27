@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Home, Plus, Users, Trash2, Bed, Search, GripVertical, X } from "lucide-react";
+import { Home, Plus, Users, Trash2, Bed, Search, GripVertical, X, FileText, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEvent } from "@/contexts/EventContext";
@@ -38,8 +38,7 @@ const RoomPlanner: React.FC<RoomPlannerProps> = ({ arrangementId }) => {
   const [sidebarSearch, setSidebarSearch] = useState("");
   const [newGuestName, setNewGuestName] = useState("");
 
-  // 1. Fetch Hydrated Layout Configuration including database-persisted arrangement guests
-  const { data: arrangement } = useQuery<any>({
+  const { data: arrangement, isLoading: isLoadingArrangement } = useQuery<any>({
     queryKey: ['arrangement-detail-rooms', arrangementId],
     queryFn: async () => {
       const res = await api.get(`/api/arrangements/${arrangementId}`);
@@ -47,14 +46,18 @@ const RoomPlanner: React.FC<RoomPlannerProps> = ({ arrangementId }) => {
     }
   });
 
-  // 2. Stream confirmed guests corresponding to active context parameters
-  const { data: confirmedGuests = [] } = useQuery<any[]>({
-    queryKey: ['confirmed-guests-sidebar', selectedEventId, viewMode],
+  const guestListEventId = arrangement?.eventId || "all";
+
+  const { data: confirmedGuests = [], isLoading: isLoadingConfirmedGuests } = useQuery<any[]>({
+    queryKey: ['confirmed-guests-sidebar', guestListEventId, viewMode],
     queryFn: async () => {
-      const res = await api.get(`/api/arrangements/guests/confirmed?view=${viewParam}&eventId=${selectedEventId}`);
+      const res = await api.get(`/api/arrangements/guests/confirmed?view=${viewParam}&eventId=${guestListEventId}`);
       return res.data?.guests || [];
-    }
+    },
+    enabled: !!arrangement
   });
+
+  const isSidebarLoading = isLoadingArrangement || isLoadingConfirmedGuests;
 
   // Server Mutations
   const addRoomMutation = useMutation({
@@ -165,10 +168,27 @@ const RoomPlanner: React.FC<RoomPlannerProps> = ({ arrangementId }) => {
     room.guests.some(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const handleDownloadPdf = () => {
+    const baseURL = import.meta.env.VITE_API_URL || window.location.origin;
+    const targetDownloadUrl = `${baseURL}/api/arrangements/${arrangementId}/pdf?view=${viewParam}&eventId=${selectedEventId}`;
+
+    const safeLocalFileName = arrangement?.name
+      ? arrangement.name.toLowerCase().replace(/[^a-z0-9]/g, '_')
+      : arrangementId;
+
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.href = targetDownloadUrl;
+    downloadAnchor.setAttribute("download", `hotel_room_manifest_${safeLocalFileName}.pdf`);
+
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   return (
     <div className="flex h-full gap-8">
       {/* Searchable, scrollable Sidebar Panel */}
-      <Card className="w-80 h-[720px] flex flex-col border-none shadow-xl bg-white/50 backdrop-blur-sm shrink-0">
+      <Card className="w-56 h-[720px] flex flex-col border-none shadow-xl bg-white/50 backdrop-blur-sm shrink-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
@@ -199,25 +219,34 @@ const RoomPlanner: React.FC<RoomPlannerProps> = ({ arrangementId }) => {
         <CardContent className="flex-1 overflow-hidden p-0">
           <ScrollArea className="h-[500px] px-6">
             <div className="space-y-2 pb-6">
-              {filteredUnassignedGuests.map((guest: any) => (
-                <div
-                  key={guest.id}
-                  draggable={canManageEvents}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("guestId", guest.id);
-                    if (guest.isCompanion) e.dataTransfer.setData("isCompanion", "true");
-                  }}
-                  className="guest-item group flex items-center p-2 rounded-lg hover:bg-white/60 transition-colors border border-transparent hover:border-white/40 cursor-grab active:cursor-grabbing shadow-sm bg-white/40"
-                >
-                  <GripVertical className="h-4 w-4 text-muted-foreground/30 mr-2" />
-                  <span className="flex-1 font-medium text-sm">{guest.name}</span>
-                  {guest.isCompanion && (
-                    <Button variant="ghost" size="icon" onClick={() => deleteCompanionMutation.mutate(guest.id)} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" disabled={deleteCompanionMutation.isPending}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  )}
+              {isSidebarLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/60 gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary/70" />
+                  <p className="text-[11px] font-medium tracking-wide">Scoping guest ...</p>
                 </div>
-              ))}
+              ) : filteredUnassignedGuests.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-12 italic">No unassigned guests available.</p>
+              ) : (
+                filteredUnassignedGuests.map((guest: any) => (
+                  <div
+                    key={guest.id}
+                    draggable={canManageEvents}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("guestId", guest.id);
+                      if (guest.isCompanion) e.dataTransfer.setData("isCompanion", "true");
+                    }}
+                    className="guest-item group flex items-center p-2 rounded-lg hover:bg-white/60 transition-colors border border-transparent hover:border-white/40 cursor-grab active:cursor-grabbing shadow-sm bg-white/40"
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground/30 mr-2" />
+                    <span className="flex-1 font-medium text-sm">{guest.name}</span>
+                    {guest.isCompanion && (
+                      <Button variant="ghost" size="icon" onClick={() => deleteCompanionMutation.mutate(guest.id)} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" disabled={deleteCompanionMutation.isPending}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </ScrollArea>
         </CardContent>
@@ -235,11 +264,23 @@ const RoomPlanner: React.FC<RoomPlannerProps> = ({ arrangementId }) => {
               className="pl-9 rounded-full bg-white/50 border-none shadow-sm focus-visible:ring-primary/20"
             />
           </div>
-          {canManageEvents && (
-            <Button onClick={addRoom} className="rounded-full shadow-md">
-              <Plus className="mr-2 h-4 w-4" /> Add Room
+          <div className="flex items-center gap-2">
+            {/* ─── NEW: PRINT MANIFEST PDF COMMAND BUTTON ─── */}
+            <Button
+              variant="outline"
+              onClick={handleDownloadPdf}
+              className="rounded-full shadow-sm border border-border bg-white hover:bg-zinc-50 font-semibold text-xs flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4 text-rose-600" />
+              <span>Print PDF Summary</span>
             </Button>
-          )}
+
+            {canManageEvents && (
+              <Button onClick={addRoom} className="rounded-full shadow-md">
+                <Plus className="mr-2 h-4 w-4" /> Add Room
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

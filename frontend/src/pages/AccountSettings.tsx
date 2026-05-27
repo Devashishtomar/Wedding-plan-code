@@ -341,7 +341,7 @@ const AccountSettings = () => {
               <div className="flex gap-2">
                 <select className="flex-1 h-10 px-3 rounded-md border border-input bg-background text-sm" value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
                   <option value="FAMILY">Family Member</option>
-                  <option value="PLANNER">Planner</option>
+                  <option value="OTHER">Planner</option>
                   <option value="BRIDE">Bride</option>
                   <option value="GROOM">Groom</option>
                 </select>

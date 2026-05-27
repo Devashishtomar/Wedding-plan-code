@@ -40,7 +40,7 @@ export const setupWeddingService = async ({ weddingId, userId, data }) => {
                 },
                 data: {
                     role: role,
-                    side: role, 
+                    side: role,
                     canViewPrivate: true,
                     canEditPrivate: true,
                     canEditCombinedView: true,
@@ -82,10 +82,12 @@ export const updateWeddingMember = async ({ weddingId, memberId, role, side, per
     const isCouple = role === 'BRIDE' || role === 'GROOM';
     const memberSide = isCouple ? role : (side !== undefined ? side : member.side);
 
+    const cleanDbRole = ['BRIDE', 'GROOM', 'FAMILY', 'OTHER', 'PENDING'].includes(role) ? role : 'OTHER';
+
     return prisma.weddingMember.update({
         where: { id: memberId },
         data: {
-            role,
+            role: cleanDbRole,
             side: memberSide,
             canViewPrivate: isCouple ? true : (permissions?.canViewPrivate ?? member.canViewPrivate),
             canEditPrivate: isCouple ? true : (permissions?.canEditPrivate ?? member.canEditPrivate),

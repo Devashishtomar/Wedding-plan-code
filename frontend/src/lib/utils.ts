@@ -5,10 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-US", {
+export const formatCurrency = (amount: number, currencyCode?: "USD" | "INR") => {
+  const activeCurrency = currencyCode || (localStorage.getItem("app_currency") as "USD" | "INR") || "USD";
+  const targetLocale = activeCurrency === "INR" ? "en-IN" : "en-US";
+
+  return new Intl.NumberFormat(targetLocale, {
     style: "currency",
-    currency: "USD",
+    currency: activeCurrency,
     minimumFractionDigits: 0,
   }).format(amount);
 };
