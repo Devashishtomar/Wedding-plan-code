@@ -50,13 +50,16 @@ export async function renderCustomInvitationToImage(invitationId, weddingId) {
                 : invitation.customBackground;
 
             const bgPath = path.join(process.cwd(), relativeBgPath);
-            const bgBase64 = fs.readFileSync(bgPath, { encoding: 'base64' });
-            const mimeType = invitation.customBackground.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-            backgroundStyle = `background-image: url('data:${mimeType};base64,${bgBase64}'); background-size: cover; background-position: center;`;
+            if (fs.existsSync(bgPath)) {
+                const bgBase64 = fs.readFileSync(bgPath, { encoding: 'base64' });
+                const mimeType = invitation.customBackground.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+                backgroundStyle = `background-image: url('data:${mimeType};base64,${bgBase64}'); background-size: cover; background-position: center;`;
+            } else {
+                console.warn(`[WARN] Custom background asset file missing on disk map: ${bgPath}. Using fallback background color context.`);
+            }
         } catch (err) {
             console.error("Failed to load local background image for render:", err);
-            // Will fallback to the default white background if file is missing
         }
     }
 
@@ -87,7 +90,18 @@ export async function renderCustomInvitationToImage(invitationId, weddingId) {
         }
 
         if (el.type === 'image') {
-            return `<img src="${el.src}" style="${baseStyle} opacity: ${el.opacity}; object-fit: cover;" />`;
+            let verifiedSrc = el.src;
+
+            if (verifiedSrc.startsWith('/uploads/')) {
+                verifiedSrc = `file://${path.join(process.cwd(), verifiedSrc.slice(1))}`;
+            } else if (verifiedSrc.includes('/uploads/')) {
+                const urlSegments = verifiedSrc.split('/uploads/');
+                if (urlSegments[1]) {
+                    verifiedSrc = `file://${path.join(process.cwd(), 'uploads', urlSegments[1])}`;
+                }
+            }
+
+            return `<img src="${verifiedSrc}" style="${baseStyle} opacity: ${el.opacity}; object-fit: cover;" />`;
         }
 
         return '';
@@ -131,10 +145,11 @@ export async function renderCustomInvitationToImage(invitationId, weddingId) {
         });
 
         const page = await browser.newPage();
+        await page.setBypassCSP(true);
         await page.setViewport({ width: width, height: height });
         await page.setContent(html, {
-            waitUntil: ['networkidle0', 'domcontentloaded'],
-            timeout: 60000,
+            waitUntil: ['domcontentloaded', 'load'],
+            timeout: 60000, // Safe 30 second threshold timeout ceiling
         });
         await page.evaluateHandle('document.fonts.ready');
 

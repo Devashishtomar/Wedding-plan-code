@@ -19,7 +19,6 @@ interface EditorToolbarProps {
   onAddText: () => void;
   onAddImage: () => void;
   onSave: () => void;
-  onDownload: () => void;
   onBack: () => void;
   onDelete: () => void;
   hasSelectedElement: boolean;
@@ -31,7 +30,6 @@ const EditorToolbar = ({
   onAddText,
   onAddImage,
   onSave,
-  onDownload,
   onBack,
   onDelete,
   hasSelectedElement,
@@ -65,7 +63,7 @@ const EditorToolbar = ({
           <TooltipContent>Generate an interactive layout canvas with AI</TooltipContent>
         </Tooltip>
       </div>
-      
+
       {/* Center - Quick add elements */}
       <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
         <Tooltip>
@@ -103,12 +101,8 @@ const EditorToolbar = ({
         )}
       </div>
 
-      {/* Right side - Save & Download */}
+      {/* Right side - Save  */}
       <div className="flex items-center gap-1">
-        <Button variant="outline" size="sm" onClick={onDownload} className="h-7 px-2 text-xs">
-          <Download className="h-3 w-3 mr-1" />
-          Download
-        </Button>
         <Button size="sm" onClick={onSave} disabled={isSaving} className="h-7 px-2 text-xs">
           <Save className="h-3 w-3 mr-1" />
           {isSaving ? "..." : "Save"}

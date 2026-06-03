@@ -43,7 +43,30 @@ const corsOptions = {
 // Security headers
 app.use(
     helmet({
-        contentSecurityPolicy: false, // frontend handles CSP
+        contentSecurityPolicy: {
+            directives: {
+                ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+                "img-src": [
+                    "'self'",
+                    "data:",
+                    "blob:",
+                    "https:"
+                ],
+                "connect-src": [
+                    "'self'",
+                    "https:",
+                    "http:",
+                    "ws:",
+                    "wss:",
+                    "data:",
+                    "blob:",
+                    "https://tiktechno.com",
+                    "https://www.tiktechno.com",
+                    "https://api.unsplash.com",
+                    "https://api.pexels.com"
+                ]
+            }
+        },
         crossOriginEmbedderPolicy: false,
         crossOriginResourcePolicy: { policy: "cross-origin" },
         frameguard: { action: 'deny' },
@@ -51,8 +74,11 @@ app.use(
 );
 
 // JSON only
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({
+    extended: true,
+    limit: '50mb'
+}));
 
 app.use(cookieParser());
 

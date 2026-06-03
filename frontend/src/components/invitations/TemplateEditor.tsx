@@ -212,20 +212,6 @@ const TemplateEditor = ({ template, onBack, onSave, initialData }: TemplateEdito
     setTimeout(() => setIsSaving(false), 800);
   };
 
-  const handleDownload = () => {
-    if (!initialData?.id) return;
-
-    toast({
-      title: "Preparing download",
-      description: "Your invitation is being generated.",
-    });
-
-    window.open(
-      `${import.meta.env.VITE_API_URL}/api/invitations/${initialData.id}/render?download=1`,
-      "_blank"
-    );
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -235,10 +221,6 @@ const TemplateEditor = ({ template, onBack, onSave, initialData }: TemplateEdito
           Back to Templates
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
               <>

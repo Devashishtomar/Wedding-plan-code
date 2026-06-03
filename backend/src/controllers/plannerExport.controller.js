@@ -251,10 +251,33 @@ export const exportRoomsToPdf = async (req, res) => {
         `;
 
         const puppeteer = (await import('puppeteer-core')).default;
+
+        const isProd = process.env.NODE_ENV === "production";
+
+        function getLocalChromePath() {
+            if (process.platform === "win32") {
+                return "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+            }
+
+            if (process.platform === "darwin") {
+                return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+            }
+
+            return "/usr/bin/google-chrome";
+        }
+
         const browser = await puppeteer.launch({
-            headless: true,
-            channel: 'chrome',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            executablePath: isProd
+                ? process.env.PUPPETEER_EXECUTABLE_PATH
+                : getLocalChromePath(),
+
+            headless: 'new',
+
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage'
+            ]
         });
 
         const page = await browser.newPage();

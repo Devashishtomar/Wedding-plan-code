@@ -4,7 +4,7 @@ import { FieldStyles, FieldName } from "@/types/invitation";
 import { CustomInvitationData } from "@/types/customInvitation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, ExternalLink, Pencil, Sparkles, PaintBucket } from "lucide-react";
+import { Copy, Check, ExternalLink, Pencil, Sparkles, PaintBucket, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -74,6 +74,7 @@ const Invitations = () => {
 
   const [view, setView] = useState<"gallery" | "editor" | "share" | "custom-editor">("gallery");
   const [loading, setLoading] = useState(true);
+  const [downloadingStandard, setDownloadingStandard] = useState(false);
 
   const getInvitationVisibility = () => {
     if (viewMode !== 'individual') return 'SHARED';
@@ -449,7 +450,7 @@ const Invitations = () => {
                   </span>
                 </div>
                 <p className="text-muted-foreground">
-                  Build a completely custom invitation from scratch. Add text, images, shapes, borders, and style everything your way.
+                  Start with a blank canvas or an AI-generated background, then create a beautiful fully editable invitation with your own text, photos, and styling.
                 </p>
                 <div className="flex gap-4 mt-3 text-sm text-muted-foreground">
                   <span>✓ Custom fonts & colors</span>
@@ -507,7 +508,6 @@ const Invitations = () => {
   }
 
   // View 4: Share View (after saving standard templates)
-  // View 4: Share View (after saving standard templates)
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -524,6 +524,41 @@ const Invitations = () => {
               Back to Grid
             </Button>
           )}
+
+          <Button
+            variant="default"
+            disabled={downloadingStandard || !invitation?.invitation?.id}
+            onClick={async () => {
+              if (!invitation?.invitation?.id) return;
+              setDownloadingStandard(true);
+              toast({ title: "Preparing Download", description: "Generating high-resolution wedding file chunks..." });
+
+              try {
+                const viewParam = viewMode === 'individual' ? 'PRIVATE' : 'SHARED';
+                const cleanEventId = selectedEventId === 'all' ? 'all' : selectedEventId;
+
+                const res = await api.get(`/api/invitations/${invitation.invitation.id}/render?download=1&view=${viewParam}&eventId=${cleanEventId}`, { responseType: 'blob' });
+                const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.setAttribute('download', `wedding_invitation_${safeEventName}.png`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(blobUrl);
+
+                toast({ title: "Success!", description: "Invitation downloaded seamlessly." });
+              } catch (err) {
+                console.error(err);
+                toast({ title: "Error", description: "Failed to compile background graphics components safely.", variant: "destructive" });
+              } finally {
+                setDownloadingStandard(false);
+              }
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {downloadingStandard ? "Downloading..." : "Download Invitation"}
+          </Button>
           <Button variant="outline" onClick={handleEdit}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit Invitation

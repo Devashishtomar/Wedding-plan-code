@@ -340,35 +340,6 @@ const CustomEditorPage = ({ onBack, initialData, onCollapseSidebar }: CustomEdit
     }
   };
 
-  const handleDownload = useCallback(async () => {
-    if (!canvasRef.current) return;
-
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(canvasRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: invitation.backgroundColor,
-      });
-
-      const link = document.createElement("a");
-      link.download = `custom-invitation-${Date.now()}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-
-      toast({
-        title: "Downloaded!",
-        description: "Your invitation has been downloaded.",
-      });
-    } catch (error) {
-      toast({
-        title: "Download Failed",
-        description: "There was an error downloading your invitation.",
-        variant: "destructive",
-      });
-    }
-  }, [invitation.backgroundColor, toast]);
-
   const handleUploadImage = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -398,7 +369,6 @@ const CustomEditorPage = ({ onBack, initialData, onCollapseSidebar }: CustomEdit
         onAddText={addTextElement}
         onAddImage={addImageElement}
         onSave={handleSave}
-        onDownload={handleDownload}
         onBack={onBack}
         onDelete={() => selectedElementId && deleteElement(selectedElementId)}
         hasSelectedElement={!!selectedElementId}
