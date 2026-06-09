@@ -8,7 +8,7 @@ import { WeddingGuard } from "@/utils/weddingGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
-const Index = lazy(() => import("./pages/Index"));
+const BohoLanding = lazy(() => import("./pages/BohoLanding"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -35,6 +35,7 @@ const Compare = lazy(() => import("./pages/marketplace/Compare"));
 
 import { EventProvider } from "@/contexts/EventContext";
 import { MarketplaceProvider } from "@/contexts/MarketplaceContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const queryClient = new QueryClient();
 
@@ -48,42 +49,44 @@ const ProtectedLayoutWrapper = () => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Suspense fallback={<GlobalLoading />}>
-          <Routes>
-            {/* Public pages */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/wedding-setup" element={<WeddingSetup />} />
-            <Route path="/rsvp/:token" element={<PublicRSVP />} />
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Suspense fallback={<GlobalLoading />}>
+            <Routes>
+              {/* Public pages */}
+              <Route path="/" element={<BohoLanding />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/wedding-setup" element={<WeddingSetup />} />
+              <Route path="/rsvp/:token" element={<PublicRSVP />} />
 
-            {/* App pages with sidebar layout */}
-            <Route element={<ProtectedLayoutWrapper />}>
-              <Route path="/dashboard" element={<WeddingGuard><Dashboard /></WeddingGuard>} />
-              <Route path="/checklist" element={<WeddingGuard><Checklist /></WeddingGuard>} />
-              <Route path="/guests" element={<WeddingGuard><Guests /></WeddingGuard>} />
-              <Route path="/invitations" element={<WeddingGuard><Invitations /></WeddingGuard>} />
-              <Route path="/budget" element={<WeddingGuard><Budget /></WeddingGuard>} />
-              <Route path="/assistant" element={<WeddingGuard><AIAssistant /></WeddingGuard>} />
-              <Route path="/account" element={<AccountSettings />} />
-              <Route path="/inspiration" element={<WeddingGuard><Inspiration /></WeddingGuard>} />
-              <Route path="/planner" element={<WeddingGuard><Planner /></WeddingGuard>} />
-              <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/marketplace/category/:categoryId" element={<VendorListing />} />
-              <Route path="/marketplace/vendor/:vendorId" element={<VendorDetails />} />
-              <Route path="/marketplace/shortlist" element={<Shortlist />} />
-              <Route path="/marketplace/compare" element={<Compare />} />
-            </Route>
+              {/* App pages with sidebar layout */}
+              <Route element={<ProtectedLayoutWrapper />}>
+                <Route path="/dashboard" element={<WeddingGuard><Dashboard /></WeddingGuard>} />
+                <Route path="/checklist" element={<WeddingGuard><Checklist /></WeddingGuard>} />
+                <Route path="/guests" element={<WeddingGuard><Guests /></WeddingGuard>} />
+                <Route path="/invitations" element={<WeddingGuard><Invitations /></WeddingGuard>} />
+                <Route path="/budget" element={<WeddingGuard><Budget /></WeddingGuard>} />
+                <Route path="/assistant" element={<WeddingGuard><AIAssistant /></WeddingGuard>} />
+                <Route path="/account" element={<AccountSettings />} />
+                <Route path="/inspiration" element={<WeddingGuard><Inspiration /></WeddingGuard>} />
+                <Route path="/planner" element={<WeddingGuard><Planner /></WeddingGuard>} />
+                <Route path="/marketplace" element={<Marketplace />} />
+                <Route path="/marketplace/category/:categoryId" element={<VendorListing />} />
+                <Route path="/marketplace/vendor/:vendorId" element={<VendorDetails />} />
+                <Route path="/marketplace/shortlist" element={<Shortlist />} />
+                <Route path="/marketplace/compare" element={<Compare />} />
+              </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </TooltipProvider >
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </TooltipProvider >
+    </ThemeProvider>
   </QueryClientProvider >
 );
 

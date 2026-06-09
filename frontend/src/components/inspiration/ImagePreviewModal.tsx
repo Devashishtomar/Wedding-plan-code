@@ -13,14 +13,14 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 
 
-/* ─── Style palette (mirrored from Inspiration.tsx) ─────────────────────── */
+/* ─── Style palette — luxury boho gold tones ─────────────────────────────── */
 const STYLE_COLORS: Record<string, string> = {
-  Romantic: "bg-rose-100 text-rose-600 border-rose-200",
-  Bohemian: "bg-amber-100 text-amber-600 border-amber-200",
-  Rustic: "bg-orange-100 text-orange-600 border-orange-200",
-  Modern: "bg-sky-100 text-sky-600 border-sky-200",
-  Glam: "bg-purple-100 text-purple-600 border-purple-200",
-  Dramatic: "bg-zinc-100 text-zinc-600 border-zinc-200",
+  Romantic: "bg-[#FAF0E4] text-[#9A7340] border-[#C5A059]/30",
+  Bohemian: "bg-[#F5EEE0] text-[#8A6830] border-[#C5A059]/30",
+  Rustic: "bg-[#F0EAE0] text-[#7A6040] border-[#C5A059]/30",
+  Modern: "bg-[#EEF0EE] text-[#5C5C5C] border-[#C5A059]/30",
+  Glam: "bg-[#F5EDE8] text-[#9A6050] border-[#C5A059]/30",
+  Dramatic: "bg-[#E8E4DC] text-[#5C4A3C] border-[#C5A059]/30",
 };
 
 interface ImagePreviewModalProps {
@@ -91,38 +91,35 @@ export const ImagePreviewModal = ({
     }
   };
 
-
-  const styleBadge = STYLE_COLORS[image.style] ?? "bg-zinc-100 text-zinc-600 border-zinc-200";
+  const styleBadge = STYLE_COLORS[image.style] ?? "bg-[#F5EEE6] text-[#5C4A3C] border-[#C5A059]/30";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl w-full p-0 overflow-hidden rounded-2xl border-none bg-white shadow-2xl">
+      <DialogContent className="max-w-5xl w-full p-0 overflow-hidden rounded-2xl border border-[#C5A059]/20 bg-[#FBF2E9] shadow-2xl">
         <DialogTitle className="sr-only">{image.title}</DialogTitle>
 
         <div className="flex flex-col md:flex-row h-auto md:h-[85vh]">
           {/* ── Image panel ───────────────────────────────────────────── */}
-          <div className="relative flex-1 bg-zinc-900 flex items-center justify-center overflow-hidden min-h-[260px]">
+          <div className="relative flex-1 bg-[#1A140E] flex items-center justify-center overflow-hidden min-h-[260px]">
             <img
               src={image.url}
               alt={image.title}
               className="max-h-full max-w-full object-contain"
             />
 
-
-
             {/* close button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 backdrop-blur text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#0D0B0A]/60 backdrop-blur text-[#FAF6EE] flex items-center justify-center hover:bg-[#0D0B0A]/80 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* ── Info panel ────────────────────────────────────────────── */}
-          <div className="w-full md:w-80 bg-white flex flex-col border-l border-zinc-100">
+          <div className="w-full md:w-80 bg-[#FBF2E9] flex flex-col border-l border-[#C5A059]/15">
             {/* header */}
-            <div className="p-6 border-b border-zinc-100">
+            <div className="p-6 border-b border-[#C5A059]/15">
               {/* Style badge */}
               <span
                 className={`inline-block text-xs font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full border mb-3 ${styleBadge}`}
@@ -130,30 +127,29 @@ export const ImagePreviewModal = ({
                 {image.style}
               </span>
 
-              <h2 className="text-xl font-bold text-zinc-800 leading-snug">
+              <h2 className="text-xl font-display font-semibold text-[#2E251E] leading-snug">
                 {image.title}
               </h2>
-
             </div>
 
-            {/* description + tags */}
+            {/* description + tip */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#C5A059]/70 mb-2">
                   About this décor
                 </p>
-                <p className="text-sm text-zinc-600 leading-relaxed">
+                <p className="text-sm text-[#5C4A3C] leading-relaxed font-light">
                   {image.description}
                 </p>
               </div>
 
               {/* Inspiration tip */}
-              <div className="bg-rose-50 border border-rose-100 rounded-xl p-4">
-                <p className="text-xs font-semibold text-rose-600 mb-1 flex items-center gap-1">
+              <div className="bg-[#C5A059]/8 border border-[#C5A059]/25 rounded-xl p-4" style={{ background: "rgba(197,160,89,0.07)" }}>
+                <p className="text-xs font-semibold text-[#C5A059] mb-1 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5" />
                   Décor Tip
                 </p>
-                <p className="text-xs text-rose-500 leading-relaxed">
+                <p className="text-xs text-[#5C4A3C] leading-relaxed font-light">
                   Share this idea with your decorator or florist to recreate the
                   look for your special day.
                 </p>
@@ -161,28 +157,28 @@ export const ImagePreviewModal = ({
             </div>
 
             {/* action buttons */}
-            <div className="p-6 border-t border-zinc-100 flex flex-col gap-3">
+            <div className="p-6 border-t border-[#C5A059]/15 flex flex-col gap-3">
               <Button
                 onClick={toggleSave}
                 disabled={!canManageEvents || submitting}
-                className={`w-full h-11 rounded-full gap-2 font-semibold transition-all duration-200 ${!canManageEvents
-                  ? "bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200"
+                className={`w-full h-11 rounded-full gap-2 font-medium tracking-wide transition-all duration-200 text-sm ${!canManageEvents
+                  ? "bg-[#F5EEE6] text-[#5C4A3C]/40 cursor-not-allowed border border-[#C5A059]/15"
                   : saved
-                    ? "bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-100"
-                    : "bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 shadow-md shadow-rose-200"
+                    ? "bg-[#FBF2E9] text-[#C5A059] border border-[#C5A059] hover:bg-[#C5A059]/10"
+                    : "bg-[#C5A059] text-white hover:bg-[#B28D47] shadow-md"
                   }`}
                 variant="ghost"
               >
                 <Heart
-                  className={`w-4 h-4 ${saved && canManageEvents ? "fill-current text-rose-500" : ""}`}
+                  className={`w-4 h-4 ${saved && canManageEvents ? "fill-current" : ""}`}
                 />
-                {!canManageEvents ? "Viewing Only (No Modify)" : saved ? "Pinned to Board ✓" : "Pin to My Board"}
+                {!canManageEvents ? "Viewing Only" : saved ? "Pinned to Board ✓" : "Pin to My Board"}
               </Button>
 
               <Button
                 onClick={handleDownload}
                 variant="outline"
-                className="w-full h-11 rounded-full gap-2 font-medium border-zinc-200 text-zinc-600 hover:border-rose-300 hover:text-rose-500"
+                className="w-full h-11 rounded-full gap-2 font-medium border-[#C5A059]/30 text-[#5C4A3C] bg-transparent hover:border-[#C5A059] hover:text-[#C5A059] hover:bg-[#C5A059]/5 transition-all text-sm"
               >
                 <Download className="w-4 h-4" />
                 Save Image

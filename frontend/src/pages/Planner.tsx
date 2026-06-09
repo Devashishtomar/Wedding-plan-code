@@ -66,6 +66,7 @@ const Planner = () => {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newArrangement, setNewArrangement] = useState({ name: "", type: "SEATING" as ArrangementType, description: "" });
+  const [activeArrangement, setActiveArrangement] = useState<Arrangement | null>(null);
 
   const handleCreate = () => {
     if (!newArrangement.name) return;
@@ -89,20 +90,47 @@ const Planner = () => {
     }
   };
 
+  if (activeArrangement) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-3xl flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b bg-white/50 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <div className="p-2 rounded-xl bg-primary text-primary-foreground shadow-sm">
+              {activeArrangement.type === 'SEATING' ? <Users className="h-5 w-5" /> : <Home className="h-5 w-5" />}
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold">{activeArrangement.name}</h2>
+              <p className="text-xs md:text-sm text-muted-foreground">{activeArrangement.description}</p>
+            </div>
+          </div>
+          <Button variant="ghost" onClick={() => setActiveArrangement(null)} className="rounded-full hover:bg-destructive/10 hover:text-destructive">
+            Close Planner
+          </Button>
+        </div>
+        <div className="flex-1 overflow-auto bg-gray-50/50 p-4">
+          <div className="min-w-[800px] h-full">
+            {activeArrangement.type === 'SEATING' && <SeatingPlanner arrangementId={activeArrangement.id} />}
+            {activeArrangement.type === 'ROOMS' && <RoomPlanner arrangementId={activeArrangement.id} />}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="planner-container space-y-8 p-1">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-pink-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-pink-500 bg-clip-text text-transparent">
             Wedding Planner
           </h1>
-          <p className="text-muted-foreground mt-2 text-lg">
+          <p className="text-muted-foreground mt-2 text-base md:text-lg">
             Manage your seating arrangements, meals, and room assignments in one place.
           </p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button size="lg" className="rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+            <Button size="lg" className="rounded-full shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto">
               <Plus className="mr-2 h-5 w-5" /> New Arrangement
             </Button>
           </DialogTrigger>
@@ -147,6 +175,7 @@ const Planner = () => {
             arrangement={arrangement}
             showEventTag={selectedEventId === 'all'} // Injects true only when viewing the consolidated rollup dashboard view
             onDelete={() => deleteArrangementMutation.mutate(arrangement.id)}
+            onOpen={() => setActiveArrangement(arrangement)}
           />
         ))}
       </div>
@@ -154,8 +183,7 @@ const Planner = () => {
   );
 };
 
-const ArrangementCard = ({ arrangement, showEventTag, onDelete }: { arrangement: Arrangement; showEventTag: boolean; onDelete: () => void }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const ArrangementCard = ({ arrangement, showEventTag, onDelete, onOpen }: { arrangement: Arrangement; showEventTag: boolean; onDelete: () => void; onOpen: () => void }) => {
 
   // Convert raw ISO database strings into clean localized date blocks (e.g. May 21, 2026)
   const displayDate = useMemo(() => {
@@ -174,74 +202,47 @@ const ArrangementCard = ({ arrangement, showEventTag, onDelete }: { arrangement:
   }, [arrangement.updatedAt]);
 
   return (
-    <>
-      <Card className="glass-card overflow-hidden group">
-        <div className={`h-2 w-full ${arrangement.type === 'SEATING' ? 'bg-blue-400' : 'bg-purple-400'
-          }`} />
-        <CardHeader className="relative">
-          <div className="p-3 w-fit rounded-2xl bg-primary/5 text-primary mb-4">
-            {arrangement.type === 'SEATING' ? <Users className="h-6 w-6" /> :
-              <Home className="h-6 w-6" />}
-          </div>
-          <CardTitle className="text-2xl font-bold">{arrangement.name}</CardTitle>
-          <CardDescription className="text-md">{arrangement.description}</CardDescription>
-          <Badge className="arrangement-badge bg-white/50 text-foreground border-none">
-            {arrangement.type}
+    <Card className="glass-card overflow-hidden group">
+      <div className={`h-2 w-full ${arrangement.type === 'SEATING' ? 'bg-blue-400' : 'bg-purple-400'}`} />
+      <CardHeader className="relative">
+        <div className="p-3 w-fit rounded-2xl bg-primary/5 text-primary mb-4">
+          {arrangement.type === 'SEATING' ? <Users className="h-6 w-6" /> : <Home className="h-6 w-6" />}
+        </div>
+        <CardTitle className="text-2xl font-bold">{arrangement.name}</CardTitle>
+        <CardDescription className="text-md">{arrangement.description}</CardDescription>
+        <Badge className="arrangement-badge bg-white/50 text-foreground border-none">
+          {arrangement.type}
+        </Badge>
+        {showEventTag && arrangement.event?.name && (
+          <Badge variant="outline" className="w-fit mb-3 bg-zinc-50 border-zinc-200 text-zinc-600 font-semibold px-2.5 py-0.5 text-xs rounded-md shadow-sm">
+            Event: {arrangement.event.name}
           </Badge>
-          {showEventTag && arrangement.event?.name && (
-            <Badge variant="outline" className="w-fit mb-3 bg-zinc-50 border-zinc-200 text-zinc-600 font-semibold px-2.5 py-0.5 text-xs rounded-md shadow-sm">
-              Event: {arrangement.event.name}
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-center justify-between mt-6">
-            <span className="text-xs text-muted-foreground italic">Updated {displayDate}</span>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation(); // Stop click events from bleeding through onto the background modal boundaries
-                  if (window.confirm(`Are you absolutely sure you want to delete "${arrangement.name}"?`)) {
-                    onDelete();
-                  }
-                }}
-                className="rounded-full hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-              <Button onClick={() => setIsOpen(true)} className="rounded-full">
-                <Maximize2 className="mr-2 h-4 w-4" /> Open
-              </Button>
-            </div>
+        )}
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex items-center justify-between mt-6">
+          <span className="text-xs text-muted-foreground italic">Updated {displayDate}</span>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation(); // Stop click events from bleeding through onto the background modal boundaries
+                if (window.confirm(`Are you absolutely sure you want to delete "${arrangement.name}"?`)) {
+                  onDelete();
+                }
+              }}
+              className="rounded-full hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button onClick={onOpen} className="rounded-full">
+              <Maximize2 className="mr-2 h-4 w-4" /> Open
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="w-screen h-screen max-w-none m-0 p-0 flex flex-col overflow-hidden border-none glass-card rounded-none">
-          <div className="p-6 border-b flex items-center justify-between bg-white/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary text-primary-foreground shadow-lg">
-                {arrangement.type === 'SEATING' ? <Users className="h-6 w-6" /> :
-                  <Home className="h-6 w-6" />}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold">{arrangement.name}</h2>
-                <p className="text-sm text-muted-foreground">{arrangement.description}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 pr-8">
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto p-6 bg-gray-50/30">
-            {arrangement.type === 'SEATING' && <SeatingPlanner arrangementId={arrangement.id} />}
-            {arrangement.type === 'ROOMS' && <RoomPlanner arrangementId={arrangement.id} />}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

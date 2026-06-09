@@ -15,33 +15,33 @@ import {
   X,
 } from "lucide-react";
 
-/* ─── Style colour palette ───────────────────────────────────────────────── */
+/* ─── Style colour palette — luxury boho gold tones ─────────────────────── */
 const STYLE_COLORS: Record<string, string> = {
-  Romantic: "bg-rose-100 text-rose-700 border-rose-200",
-  Bohemian: "bg-amber-100 text-amber-700 border-amber-200",
-  Rustic: "bg-orange-100 text-orange-700 border-orange-200",
-  Modern: "bg-sky-100 text-sky-700 border-sky-200",
-  Glam: "bg-purple-100 text-purple-700 border-purple-200",
-  Dramatic: "bg-zinc-200 text-zinc-700 border-zinc-300",
+  Romantic: "bg-[#FAF0E4] text-[#9A7340] border-[#C5A059]/30",
+  Bohemian: "bg-[#F5EEE0] text-[#8A6830] border-[#C5A059]/30",
+  Rustic: "bg-[#F0EAE0] text-[#7A6040] border-[#C5A059]/30",
+  Modern: "bg-[#EEF0EE] text-[#5C5C5C] border-[#C5A059]/30",
+  Glam: "bg-[#F5EDE8] text-[#9A6050] border-[#C5A059]/30",
+  Dramatic: "bg-[#E8E4DC] text-[#5C4A3C] border-[#C5A059]/30",
 };
 
 const STYLE_ACTIVE: Record<string, string> = {
-  Romantic: "bg-rose-500 text-white border-rose-500 shadow-rose-200",
-  Bohemian: "bg-amber-500 text-white border-amber-500 shadow-amber-200",
-  Rustic: "bg-orange-500 text-white border-orange-500 shadow-orange-200",
-  Modern: "bg-sky-500 text-white border-sky-500 shadow-sky-200",
-  Glam: "bg-purple-500 text-white border-purple-500 shadow-purple-200",
-  Dramatic: "bg-zinc-700 text-white border-zinc-700 shadow-zinc-300",
+  Romantic: "bg-[#C5A059] text-white border-[#C5A059] shadow-[#C5A059]/20",
+  Bohemian: "bg-[#C5A059] text-white border-[#C5A059] shadow-[#C5A059]/20",
+  Rustic: "bg-[#C5A059] text-white border-[#C5A059] shadow-[#C5A059]/20",
+  Modern: "bg-[#C5A059] text-white border-[#C5A059] shadow-[#C5A059]/20",
+  Glam: "bg-[#C5A059] text-white border-[#C5A059] shadow-[#C5A059]/20",
+  Dramatic: "bg-[#C5A059] text-white border-[#C5A059] shadow-[#C5A059]/20",
 };
 
-/* gradient fallbacks per style */
+/* gradient fallbacks per style — all warm ivory tones */
 const FALLBACK_BG: Record<string, string> = {
-  Romantic: "from-rose-200 via-pink-100 to-rose-50",
-  Bohemian: "from-amber-200 via-yellow-100 to-amber-50",
-  Rustic: "from-orange-200 via-orange-100 to-stone-50",
-  Modern: "from-sky-200 via-blue-100 to-sky-50",
-  Glam: "from-purple-200 via-fuchsia-100 to-purple-50",
-  Dramatic: "from-zinc-300 via-zinc-200 to-zinc-50",
+  Romantic: "from-[#F5EEE6] via-[#FAF6EE] to-[#FBF2E9]",
+  Bohemian: "from-[#F0E8DC] via-[#F5EEE6] to-[#FBF2E9]",
+  Rustic: "from-[#EDE4D8] via-[#F2EAE0] to-[#FBF2E9]",
+  Modern: "from-[#EAE8E4] via-[#F0EDE8] to-[#FBF2E9]",
+  Glam: "from-[#F0E4DC] via-[#F5EEE6] to-[#FBF2E9]",
+  Dramatic: "from-[#E4DCD4] via-[#EDE8E0] to-[#FBF2E9]",
 };
 
 /* ─── Single card ────────────────────────────────────────────────────────── */
@@ -56,25 +56,23 @@ const InspirationCard = ({
   const saved = isSaved(image.id);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const fallback = FALLBACK_BG[image.style] ?? "from-rose-100 via-pink-50 to-white";
+  const fallback = FALLBACK_BG[image.style] ?? "from-[#F5EEE6] via-[#FAF6EE] to-[#FBF2E9]";
 
   return (
     <div
-      className="relative group overflow-hidden rounded-2xl break-inside-avoid cursor-zoom-in mb-4 shadow-sm hover:shadow-xl transition-shadow duration-300"
+      className="relative group overflow-hidden rounded-2xl break-inside-avoid cursor-zoom-in mb-4 shadow-sm hover:shadow-xl transition-all duration-300 border border-[#C5A059]/10 hover:border-[#C5A059]/30"
       onClick={() => onImageClick(image)}
     >
       {imgError ? (
-        /* ── Fallback card when image fails to load ── */
         <div className={`w-full min-h-[220px] bg-gradient-to-br ${fallback} flex flex-col items-center justify-center p-6 text-center select-none`}>
-          <Flower2 className="w-10 h-10 text-rose-300 mb-3" />
-          <p className="text-zinc-600 font-semibold text-sm leading-snug mb-2">{image.title}</p>
+          <Flower2 className="w-10 h-10 text-[#C5A059]/50 mb-3" />
+          <p className="text-[#5C4A3C] font-semibold text-sm leading-snug mb-2">{image.title}</p>
           <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${STYLE_COLORS[image.style] ?? ""}`}>
             {image.style}
           </span>
         </div>
       ) : (
         <>
-          {/* shimmer placeholder while loading */}
           {!imgLoaded && (
             <div className={`w-full min-h-[220px] bg-gradient-to-br ${fallback} animate-pulse`} />
           )}
@@ -84,12 +82,11 @@ const InspirationCard = ({
             loading="lazy"
             onLoad={() => setImgLoaded(true)}
             onError={() => setImgError(true)}
-            className={`w-full h-auto object-cover transition-all duration-500 group-hover:scale-105 block ${imgLoaded ? "opacity-100" : "opacity-0 h-0"
-              }`}
+            className={`w-full h-auto object-cover transition-all duration-500 group-hover:scale-105 block ${imgLoaded ? "opacity-100" : "opacity-0 h-0"}`}
           />
           {/* gradient overlay */}
           {imgLoaded && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           )}
         </>
       )}
@@ -99,8 +96,8 @@ const InspirationCard = ({
         aria-label={saved ? "Remove from board" : "Save to board"}
         className={`absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-200
           ${saved
-            ? "bg-rose-500 text-white scale-110"
-            : "bg-white/90 text-zinc-700 opacity-0 group-hover:opacity-100 hover:bg-rose-50"
+            ? "bg-[#C5A059] text-white scale-110"
+            : "bg-[#FBF2E9]/90 text-[#5C4A3C] opacity-0 group-hover:opacity-100 hover:bg-[#FBF2E9]"
           }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -113,7 +110,7 @@ const InspirationCard = ({
       {/* bottom info (only on real loaded image) */}
       {!imgError && imgLoaded && (
         <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-          <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border mb-1.5 inline-block ${STYLE_COLORS[image.style] ?? "bg-white/20 text-white border-white/30"}`}>
+          <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border mb-1.5 inline-block ${STYLE_COLORS[image.style] ?? "bg-[#FBF2E9]/20 text-white border-white/30"}`}>
             {image.style}
           </span>
           <p className="text-white font-semibold text-sm leading-snug drop-shadow-md truncate">
@@ -135,12 +132,12 @@ const ImageGrid = ({
 }) => {
   if (images.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-72 text-center mt-10 rounded-2xl border border-dashed border-rose-200 bg-rose-50/30 p-10">
-        <Flower2 className="w-14 h-14 text-rose-300 mb-4" />
-        <h3 className="text-xl font-semibold text-zinc-700 mb-2">
+      <div className="flex flex-col items-center justify-center h-72 text-center mt-10 rounded-2xl border border-dashed border-[#C5A059]/30 bg-[#FBF2E9] dark:bg-[#15120F] p-10">
+        <Flower2 className="w-14 h-14 text-[#C5A059]/40 mb-4" />
+        <h3 className="text-xl font-display font-semibold text-[#2E251E] dark:text-[#FAF6EE] mb-2">
           No décor ideas found
         </h3>
-        <p className="text-zinc-400 max-w-sm text-sm">
+        <p className="text-[#5C4A3C] dark:text-[#C5B9AC] max-w-sm text-sm font-light">
           Try selecting a different style, or browse the Discover tab to pin ideas you love.
         </p>
       </div>
@@ -164,10 +161,10 @@ const InspirationGridSkeleton = () => (
   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
     {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
       <div key={i} className="space-y-3 animate-pulse">
-        <div className="bg-zinc-100 rounded-2xl h-64 w-full" />
+        <div className="bg-[#F0E8DC] dark:bg-[#1A1610] rounded-2xl h-64 w-full" />
         <div className="space-y-2 px-2">
-          <div className="h-4 bg-zinc-100 rounded w-3/4" />
-          <div className="h-3 bg-zinc-100 rounded w-1/2" />
+          <div className="h-4 bg-[#F0E8DC] dark:bg-[#1A1610] rounded w-3/4" />
+          <div className="h-3 bg-[#F0E8DC] dark:bg-[#1A1610] rounded w-1/2" />
         </div>
       </div>
     ))}
@@ -224,52 +221,66 @@ const InspirationContent = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50/60 via-white to-pink-50/40 pb-16">
+    <div className="min-h-screen bg-[#FBF2E9] dark:bg-[#0D0B0A] pb-16 transition-colors duration-500">
 
       {/* ── Hero Banner ─────────────────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #fdf2f8 0%, #fce7f3 40%, #fbcfe8 100%)" }}
-      >
+      <div className="relative overflow-hidden bg-[#FBF2E9] dark:bg-[#0D0B0A]">
         {/* decorative petals */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-          {["top-4 left-8", "top-8 right-16", "bottom-4 left-1/3", "bottom-8 right-1/4"].map(
+          {["top-6 left-10", "top-12 right-20", "bottom-6 left-1/3", "bottom-10 right-1/4"].map(
             (pos, i) => (
               <Flower2
                 key={i}
-                className={`absolute ${pos} text-rose-200 opacity-40`}
-                style={{ width: 40 + i * 12, height: 40 + i * 12 }}
+                className={`absolute ${pos} text-[#C5A059] opacity-10`}
+                style={{ width: 40 + i * 14, height: 40 + i * 14 }}
               />
             )
           )}
+          {/* Subtle gold circle accent */}
+          <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full border border-[#C5A059]/10 pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full border border-[#C5A059]/10 pointer-events-none" />
         </div>
 
-        <div className="relative container mx-auto px-4 pt-12 pb-10 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/70 backdrop-blur border border-rose-200 text-rose-600 text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4 shadow-sm">
+        <div className="relative container mx-auto px-4 pt-14 pb-12 text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 bg-[#C5A059]/10 border border-[#C5A059]/30 text-[#C5A059] text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6 shadow-sm">
             <Sparkles className="w-3.5 h-3.5" />
             Wedding Décor Inspiration
           </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-zinc-800 mb-3">
+          <h1
+            className="font-display font-light uppercase tracking-wide text-[#2E251E] dark:text-[#FAF6EE] mb-4 leading-[1.1]"
+            style={{ fontSize: "clamp(2.4rem, 5vw, 4rem)" }}
+          >
             Décor{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-pink-400">
-              Inspiration
-            </span>{" "}
+            <span className="font-semibold text-[#C5A059]">Inspiration</span>{" "}
             Board
           </h1>
-          <p className="text-zinc-500 text-lg max-w-2xl mx-auto">
-            Explore curated wedding decoration ideas — from floral arches and
+          {/* Ornamental divider */}
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <div className="h-px w-10 bg-[#C5A059]/50" />
+            <svg viewBox="0 0 56 18" className="w-14 h-4 text-[#C5A059]" fill="none">
+              <path d="M2 9 Q14 4 28 9 Q42 14 54 9" stroke="currentColor" strokeWidth="0.8" />
+              <circle cx="28" cy="9" r="2.2" fill="currentColor" />
+              <circle cx="10" cy="8.5" r="1" fill="currentColor" opacity="0.5" />
+              <circle cx="46" cy="8.5" r="1" fill="currentColor" opacity="0.5" />
+            </svg>
+            <div className="h-px w-10 bg-[#C5A059]/50" />
+          </div>
+
+          <p className="text-[#5C4A3C] dark:text-[#C5B9AC] text-base max-w-2xl mx-auto font-light leading-relaxed">
+            Explore curated wedding decoration ideas from floral arches and
             fairy light canopies to table settings and candlelit backdrops.
           </p>
 
           {/* stats row */}
-          <div className="flex items-center justify-center gap-10 mt-8">
+          <div className="flex items-center justify-center gap-12 mt-10">
             {[
               { label: "Décor Ideas", value: `${INSPIRATION_IMAGES.length}+` },
               { label: "Styles", value: allStyles.length },
             ].map(({ label, value }) => (
               <div key={label} className="text-center">
-                <p className="text-3xl font-bold text-rose-500">{value}</p>
-                <p className="text-xs text-zinc-400 uppercase tracking-wider mt-0.5">{label}</p>
+                <p className="text-3xl font-display font-bold text-[#C5A059]">{value}</p>
+                <p className="text-[10px] text-[#5C4A3C] dark:text-[#C5B9AC] uppercase tracking-wider mt-1 font-light">{label}</p>
               </div>
             ))}
           </div>
@@ -281,22 +292,22 @@ const InspirationContent = () => {
         <Tabs defaultValue="feed" className="w-full">
 
           {/* Tab switcher */}
-          <TabsList className="grid grid-cols-2 p-1 bg-white border border-zinc-100 rounded-full shadow-sm w-full sm:w-72 mb-6">
+          <TabsList className="grid grid-cols-2 p-1 bg-[#F5EEE6] dark:bg-[#1A1610] border border-[#C5A059]/20 rounded-full shadow-sm w-full sm:w-72 mb-6">
             <TabsTrigger
               value="feed"
-              className="rounded-full text-sm px-6 py-2 data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=active]:shadow"
+              className="rounded-full text-sm px-6 py-2 text-[#5C4A3C] dark:text-[#C5B9AC] data-[state=active]:bg-[#C5A059] data-[state=active]:text-white data-[state=active]:shadow font-medium transition-all"
             >
               <Sparkles className="w-4 h-4 mr-1.5" />
               Discover
             </TabsTrigger>
             <TabsTrigger
               value="board"
-              className="rounded-full text-sm px-6 py-2 data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=active]:shadow"
+              className="rounded-full text-sm px-6 py-2 text-[#5C4A3C] dark:text-[#C5B9AC] data-[state=active]:bg-[#C5A059] data-[state=active]:text-white data-[state=active]:shadow font-medium transition-all"
             >
               <Heart className="w-4 h-4 mr-1.5" />
               My Board
               {savedImages.length > 0 && (
-                <span className="ml-1.5 bg-white text-rose-500 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                <span className="ml-1.5 bg-white text-[#C5A059] text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {savedImages.length}
                 </span>
               )}
@@ -308,18 +319,18 @@ const InspirationContent = () => {
             value="feed"
             className="animate-in fade-in slide-in-from-bottom-4 duration-500"
           >
-            {/* Context Bubble Status Banner indicating correct isolation boundaries */}
-            <div className="flex gap-2 items-center mb-4 bg-zinc-50 border border-zinc-100 p-3 rounded-xl text-xs text-zinc-600">
-              <Sparkles className="w-3.5 h-3.5 text-pink-500 animate-pulse" />
+            {/* Context Banner */}
+            <div className="flex gap-2 items-center mb-4 bg-[#F5EEE6] dark:bg-[#1A1610] border border-[#C5A059]/15 p-3 rounded-xl text-xs text-[#5C4A3C] dark:text-[#C5B9AC]">
+              <Sparkles className="w-3.5 h-3.5 text-[#C5A059] animate-pulse" />
               <span>
-                Workspace View: <strong className="text-zinc-800">{selectedEvent ? selectedEvent.name : "All Events Combined"}</strong>
-                {selectedEvent ? "" : " (Roll-up Dashboard)"} · Space: <span className="font-semibold capitalize">{viewMode === 'collaborative' ? 'Shared workspace' : 'Private section'}</span>
+                Workspace View: <strong className="text-[#2E251E] dark:text-[#F3EFE9]">{selectedEvent ? selectedEvent.name : "All Events Combined"}</strong>
+                {selectedEvent ? "" : " (Roll-up Dashboard)"} · Space: <span className="font-semibold capitalize">{viewMode === 'collaborative' ? 'Shared Workspace' : 'Private Section'}</span>
               </span>
             </div>
 
             {/* Live Interactive Search Box Input Field Component Component */}
             <div className="relative mb-6 max-w-md group">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-rose-500 transition-colors" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5A059]/60 group-focus-within:text-[#C5A059] transition-colors" />
               <Input
                 type="text"
                 placeholder="Search decor inspiration (Press Enter to search)..."
@@ -331,7 +342,7 @@ const InspirationContent = () => {
                     setSearchQuery(localSearch);
                   }
                 }}
-                className="rounded-xl pl-10 pr-10 py-6 text-sm border-zinc-200 focus-visible:ring-rose-400 focus-visible:ring-offset-0 bg-white shadow-sm"
+                className="rounded-full pl-10 pr-10 py-5 text-sm border-[#C5A059]/25 focus-visible:ring-[#C5A059] focus-visible:ring-offset-0 bg-[#F5EEE6] dark:bg-[#1A1610] text-[#2E251E] dark:text-[#F3EFE9] placeholder:text-[#5C4A3C]/50 shadow-sm font-light"
               />
               {localSearch && (
                 <button
@@ -339,7 +350,7 @@ const InspirationContent = () => {
                     setLocalSearch("");
                     setSearchQuery("");
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5C4A3C]/50 hover:text-[#C5A059] p-1 rounded-md transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -347,9 +358,9 @@ const InspirationContent = () => {
             </div>
 
             {/* Style filter bar */}
-            <div className="bg-white border border-zinc-100 rounded-2xl px-5 py-4 shadow-sm mb-6 flex items-center gap-3 flex-wrap">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0">
-                <Tag className="w-3.5 h-3.5" />
+            <div className="bg-[#F5EEE6] dark:bg-[#1A1610] border border-[#C5A059]/15 rounded-2xl px-5 py-4 shadow-sm mb-6 flex items-center gap-3 flex-wrap">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-[#5C4A3C]/70 dark:text-[#C5B9AC] uppercase tracking-wider shrink-0">
+                <Tag className="w-3.5 h-3.5 text-[#C5A059]" />
                 Filter by Style
               </span>
 
@@ -361,8 +372,8 @@ const InspirationContent = () => {
                     onClick={() => toggleStyle(style)}
                     className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 shadow-sm
                       ${isActive
-                        ? STYLE_ACTIVE[style] ?? "bg-zinc-700 text-white border-zinc-700"
-                        : "bg-white text-zinc-500 border-zinc-200 hover:border-rose-300 hover:text-rose-500"
+                        ? STYLE_ACTIVE[style] ?? "bg-[#C5A059] text-white border-[#C5A059]"
+                        : "bg-[#FBF2E9] dark:bg-[#0D0B0A] text-[#5C4A3C] dark:text-[#C5B9AC] border-[#C5A059]/20 hover:border-[#C5A059] hover:text-[#C5A059]"
                       }`}
                   >
                     {style}
@@ -373,7 +384,7 @@ const InspirationContent = () => {
               {activeStyles.length > 0 && (
                 <button
                   onClick={clearFilters}
-                  className="flex items-center gap-1 text-xs text-zinc-400 hover:text-rose-500 transition-colors ml-1"
+                  className="flex items-center gap-1 text-xs text-[#5C4A3C]/60 hover:text-[#C5A059] transition-colors ml-1"
                 >
                   <X className="w-3.5 h-3.5" />
                   Clear
@@ -382,23 +393,16 @@ const InspirationContent = () => {
             </div>
 
             {/* Result count */}
-            <p className="text-sm text-zinc-400 mb-2">
+            <p className="text-sm text-[#5C4A3C]/60 dark:text-[#C5B9AC] mb-2 font-light">
               Showing{" "}
-              <span className="font-semibold text-zinc-600">{filteredImages.length}</span>{" "}
+              <span className="font-semibold text-[#2E251E] dark:text-[#F3EFE9]">{filteredImages.length}</span>{" "}
               décor idea{filteredImages.length !== 1 ? "s" : ""}
               {activeStyles.length > 0 && (
                 <span>
                   {" "}·{" "}
                   {activeStyles.map((s, i) => (
                     <span key={s}>
-                      <span
-                        className={`font-medium ${STYLE_COLORS[s]
-                          ?.split(" ")
-                          .find((c) => c.startsWith("text-")) ?? "text-rose-500"
-                          }`}
-                      >
-                        {s}
-                      </span>
+                      <span className="font-medium text-[#C5A059]">{s}</span>
                       {i < activeStyles.length - 1 && ", "}
                     </span>
                   ))}
@@ -417,7 +421,7 @@ const InspirationContent = () => {
                     <button
                       onClick={loadMoreDiscovery}
                       disabled={loadingDiscovery}
-                      className="rounded-full px-8 py-3 border border-zinc-200 bg-white text-sm font-semibold text-zinc-600 hover:bg-zinc-50 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm disabled:opacity-50"
+                      className="rounded-full px-8 py-3 border border-[#C5A059] bg-transparent text-sm font-medium text-[#C5A059] hover:bg-[#C5A059]/10 transition-all shadow-sm disabled:opacity-50 tracking-wide"
                     >
                       {loadingDiscovery ? "Loading Next 30 Concepts..." : "Show More Ideas"}
                     </button>
@@ -438,11 +442,11 @@ const InspirationContent = () => {
               <>
                 {savedImages.length > 0 && (
                   <div className="flex items-center gap-2 mb-4">
-                    <Flower2 className="w-4 h-4 text-rose-400" />
-                    <p className="text-sm text-zinc-500">
+                    <Flower2 className="w-4 h-4 text-[#C5A059]" />
+                    <p className="text-sm text-[#5C4A3C] dark:text-[#C5B9AC] font-light">
                       You have{" "}
-                      <span className="font-semibold text-zinc-700">{savedImages.length}</span>{" "}
-                      décor idea{savedImages.length !== 1 ? "s" : ""} pinned to your isolated view.
+                      <span className="font-semibold text-[#2E251E] dark:text-[#F3EFE9]">{savedImages.length}</span>{" "}
+                      décor idea{savedImages.length !== 1 ? "s" : ""} pinned to your board.
                     </p>
                   </div>
                 )}

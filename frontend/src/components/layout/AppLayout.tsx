@@ -36,9 +36,8 @@ import {
 } from "@/components/ui/sidebar";
 import { useEvent } from "@/contexts/EventContext";
 import WeddingSetup from "@/pages/WeddingSetup";
-
-
 import EventSelector from "./EventSelector";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -182,6 +181,7 @@ const AppLayout = () => {
               </div>
 
               <div className="flex items-center gap-4">
+                <ThemeSwitcher align="end" />
                 {/* ─── COUNTRY & REGION SELECT DROPDOWN ─── */}
                 <div className="flex items-center gap-2 bg-muted/60 border border-border/50 rounded-xl px-3 py-1.5 h-9">
                   <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase hidden sm:inline">Region:</span>
